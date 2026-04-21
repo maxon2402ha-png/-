@@ -1,0 +1,23 @@
+﻿<Application x:Class="КР_Ханников.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:КР_Ханников.Converters" 
+             StartupUri="Windows/LoginWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Colors.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <converters:RoleToVisibilityConverter x:Key="RoleToVisibilityConverter"/>
+            <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
+            <converters:RoleToColorConverter x:Key="RoleToColorConverter"/>
+            <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter"/>
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
+            <converters:PathToImageConverter x:Key="PathToImageConverter"/>
+
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

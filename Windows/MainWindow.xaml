@@ -1,0 +1,680 @@
+﻿<Window x:Class="КР_Ханников.Windows.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:converters="clr-namespace:КР_Ханников.Converters"
+        mc:Ignorable="d"
+        Title="Service Desk Platform"
+        Height="850" 
+        Width="1400"
+        MinHeight="700"
+        MinWidth="1100"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="Segoe UI"
+        Background="{DynamicResource Brush.Background}"
+        RenderOptions.BitmapScalingMode="HighQuality">
+
+    <Window.Resources>
+        <converters:RoleToVisibilityConverter x:Key="RoleToVisibilityConverter"/>
+        <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
+        <converters:PathToImageConverter x:Key="PathToImageConverter"/>
+
+        <Geometry x:Key="Icon.Dashboard">M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z</Geometry>
+        <Geometry x:Key="Icon.Ticket">M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z</Geometry>
+        <Geometry x:Key="Icon.Users">M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z</Geometry>
+        <Geometry x:Key="Icon.Book">M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z</Geometry>
+        <Geometry x:Key="Icon.Bell">M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z</Geometry>
+        <Geometry x:Key="Icon.Logout">M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z</Geometry>
+        <Geometry x:Key="Icon.Search">M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z</Geometry>
+        <Geometry x:Key="Icon.Archive">M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM6.24 5h11.52l.83 1H5.42l.82-1zM19 19H5V8h14v11zm-11-5.5l5 4.5 5-4.5h-3v-4h-4v4z</Geometry>
+        <Geometry x:Key="Icon.History">M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z</Geometry>
+        <Geometry x:Key="Icon.Settings">M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59-.22L3.76 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z</Geometry>
+        <Geometry x:Key="Icon.Security">M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z</Geometry>
+        <Geometry x:Key="Icon.Star">M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z</Geometry>
+        <Geometry x:Key="Icon.Delete">M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z</Geometry>
+
+        <Style x:Key="NavButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#374151"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#4B5563"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="NavButtonActive" TargetType="Button" BasedOn="{StaticResource NavButton}">
+            <Setter Property="Background" Value="#374151"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource Brush.Primary}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Padding" Value="16,0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Brush.PrimaryDark}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Brush.PrimaryDark}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Brush.Border}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource Brush.TextSecondary}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Brush.Background}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Danger}"/>
+            <Setter Property="BorderBrush" Value="#FCA5A5"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FEF2F2"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="FontSize" Value="14"/>
+                        <Setter Property="Padding" Value="12,8"/>
+
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ComboBoxItem">
+                                    <Border x:Name="Bd"
+                                            Background="{TemplateBinding Background}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Left"
+                                                          VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.PrimaryLight}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource Brush.Primary}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="DatePicker">
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface}"/>
+        </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="GridLinesVisibility" Value="None"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="RowHeaderWidth" Value="0"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        </Style>
+
+        <Style TargetType="DataGridRow">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Divider}"/>
+            <Setter Property="MinHeight" Value="52"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource Brush.PrimaryLight}"/>
+                    <Setter Property="BorderBrush" Value="Transparent"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Storyboard x:Key="WindowFadeIn">
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25"/>
+        </Storyboard>
+    </Window.Resources>
+
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="Loaded">
+            <BeginStoryboard Storyboard="{StaticResource WindowFadeIn}"/>
+        </EventTrigger>
+    </Window.Triggers>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="260"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="#1F2937">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Margin="24,28,24,32">
+                    <TextBlock Text="SERVICE DESK" Foreground="White" FontSize="18" FontWeight="Bold"/>
+                    <TextBlock Text="Platform" Foreground="#6B7280" FontSize="11" Margin="0,2,0,0"/>
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="10,0">
+                    <StackPanel>
+                        <TextBlock Text="MAIN" Foreground="#4B5563" FontSize="10" FontWeight="Bold" Margin="14,0,0,8"/>
+
+                        <Button x:Name="OpenDashboardButton" Click="OpenDashboard_Click" Style="{StaticResource NavButton}" Visibility="{Binding CurrentUser.Role, Converter={StaticResource RoleToVisibilityConverter}, ConverterParameter='Support,Admin'}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Dashboard}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,12,0"/>
+                                <TextBlock Text="Дашборд"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="MyTicketsButton" Click="OpenMyTickets_Click" Style="{StaticResource NavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Ticket}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,12,0"/>
+                                <TextBlock Text="Мои тикеты"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="AllTicketsButton" Click="OpenAllTickets_Click" Style="{StaticResource NavButton}" Visibility="{Binding CurrentUser.Role, Converter={StaticResource RoleToVisibilityConverter}, ConverterParameter='Support,Admin'}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Ticket}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,12,0"/>
+                                <TextBlock Text="Все заявки"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="ClientHistoryButton" Click="OpenClientHistory_Click" Style="{StaticResource NavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.History}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,12,0"/>
+                                <TextBlock Text="История"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="ClosedTicketsButton" Click="OpenClosedTickets_Click" Style="{StaticResource NavButton}" Visibility="{Binding CurrentUser.Role, Converter={StaticResource RoleToVisibilityConverter}, ConverterParameter='Support,Admin'}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Archive}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,12,0"/>
+                                <TextBlock Text="Архив"/>
+                            </StackPanel>
+                        </Button>
+
+                        <TextBlock Text="ADMIN" Foreground="#4B5563" FontSize="10" FontWeight="Bold" Margin="14,24,0,8" Visibility="{Binding CurrentUser.Role, Converter={StaticResource RoleToVisibilityConverter}, ConverterParameter='Admin'}"/>
+
+                        <Button x:Name="EmployeesButton" Click="OpenEmployees_Click" Style="{StaticResource NavButton}" Visibility="{Binding CurrentUser.Role, Converter={StaticResource RoleToVisibilityConverter}, ConverterParameter='Admin'}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Users}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,12,0"/>
+                                <TextBlock Text="Сотрудники"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="IntegrationButton" Click="OpenIntegrationSettings_Click" Style="{StaticResource NavButton}" Visibility="{Binding CurrentUser.Role, Converter={StaticResource RoleToVisibilityConverter}, ConverterParameter='Admin'}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Settings}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,12,0"/>
+                                <TextBlock Text="Интеграции"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="AuditButton" Click="OpenAudit_Click" Style="{StaticResource NavButton}" Visibility="{Binding CurrentUser.Role, Converter={StaticResource RoleToVisibilityConverter}, ConverterParameter='Admin'}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Security}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,12,0"/>
+                                <TextBlock Text="Безопасность"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="OpenKnowledgeBaseButton" Click="OpenKnowledgeBase_Click" Style="{StaticResource NavButton}" Visibility="{Binding CurrentUser.Role, Converter={StaticResource RoleToVisibilityConverter}, ConverterParameter='Admin,Support'}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Book}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,12,0"/>
+                                <TextBlock Text="База знаний"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <Border Grid.Row="2" BorderBrush="#374151" BorderThickness="0,1,0,0" Padding="20">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Click="OpenProfile_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" HorizontalContentAlignment="Left">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="border" Background="Transparent" CornerRadius="6" Padding="4">
+                                        <ContentPresenter/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="border" Property="Background" Value="#374151"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+
+                            <StackPanel Orientation="Horizontal">
+                                <Grid Width="36" Height="36" Margin="0,0,12,0">
+                                    <Ellipse Stroke="#4B5563" StrokeThickness="1">
+                                        <Ellipse.Fill>
+                                            <SolidColorBrush Color="#374151"/>
+                                        </Ellipse.Fill>
+                                    </Ellipse>
+                                    <Path Data="{StaticResource Icon.Users}" Fill="#9CA3AF" Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Ellipse>
+                                        <Ellipse.Fill>
+                                            <ImageBrush ImageSource="{Binding CurrentUser.AvatarPath, Converter={StaticResource PathToImageConverter}}" Stretch="UniformToFill"/>
+                                        </Ellipse.Fill>
+                                    </Ellipse>
+                                </Grid>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding CurrentUser.Username}" Foreground="White" FontWeight="SemiBold" FontSize="13"/>
+                                    <TextBlock Text="{Binding CurrentUser.Role}" Foreground="#9CA3AF" FontSize="11" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="LogoutButton" Click="Logout_Click" Grid.Column="1" Style="{StaticResource IconButton}" ToolTip="Выйти">
+                            <Path Data="{StaticResource Icon.Logout}" Fill="#EF4444" Width="18" Height="18" Stretch="Uniform"/>
+                        </Button>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Column="1">
+            <ContentControl x:Name="PagesContent" Panel.ZIndex="10" Visibility="Collapsed"/>
+
+            <Grid x:Name="TicketsContent">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="{DynamicResource Brush.Surface}" Padding="32,24" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Управление заявками" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource Brush.TextPrimary}"/>
+                                <Border x:Name="TicketCountBadge" Background="{DynamicResource Brush.PrimaryLight}" CornerRadius="12" Padding="12,4" Margin="16,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="TicketCountText" Text="0 заявок" FontSize="12" Foreground="{DynamicResource Brush.Primary}" FontWeight="Bold"/>
+                                </Border>
+                            </StackPanel>
+                            <TextBlock Text="Отслеживайте статус и управляйте обращениями" FontSize="14" Foreground="{DynamicResource Brush.TextSecondary}" Margin="0,4,0,0"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="CreateTicketButton" Click="CreateTicket_Click" Content="+ Создать тикет" Style="{StaticResource PrimaryButton}" Margin="0,0,24,0" Visibility="{Binding CurrentUser.Role, Converter={StaticResource RoleToVisibilityConverter}, ConverterParameter='Client'}"/>
+
+                            <Rectangle Width="1" Fill="{DynamicResource Brush.Border}" Margin="0,4,24,4"/>
+
+                            <Button x:Name="OpenNotificationsButton" Click="OpenNotifications_Click" Style="{StaticResource IconButton}" ToolTip="Уведомления">
+                                <Path Data="{StaticResource Icon.Bell}" Fill="{DynamicResource Brush.TextSecondary}" Width="20" Height="20" Stretch="Uniform"/>
+                            </Button>
+                            <Button x:Name="OpenNotificationSettingsButton" Click="OpenNotificationSettings_Click" Style="{StaticResource IconButton}" ToolTip="Настройки уведомлений" Margin="8,0,0,0">
+                                <Path Data="{StaticResource Icon.Settings}" Fill="{DynamicResource Brush.TextSecondary}" Width="20" Height="20" Stretch="Uniform"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="1" Background="{DynamicResource Brush.Surface}" Padding="32,20" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="16"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" CornerRadius="6" BorderThickness="1" BorderBrush="{DynamicResource Brush.Border}" Background="{DynamicResource Brush.Surface}" Height="40">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Path Grid.Column="0" Data="{StaticResource Icon.Search}" Fill="{DynamicResource Brush.TextMuted}" Width="16" Height="16" Margin="14,0,10,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                                    <TextBox x:Name="SearchBox" Grid.Column="1" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" FontSize="14" Foreground="{DynamicResource Brush.TextPrimary}" TextChanged="SearchBox_TextChanged" Padding="0,0,12,0" Height="38"/>
+                                    <TextBlock Grid.Column="1" Text="Поиск по номеру, теме или клиенту..." Foreground="{DynamicResource Brush.TextMuted}" FontSize="14" VerticalAlignment="Center" Margin="2,0,12,0" IsHitTestVisible="False" Visibility="{Binding Text.IsEmpty, ElementName=SearchBox, Converter={x:Null}}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+                            </Border>
+
+                            <ComboBox Grid.Column="2" x:Name="StatusFilter" Width="150" Height="40">
+                                <ComboBoxItem Content="Все статусы" IsSelected="True"/>
+                                <ComboBoxItem Content="Open"/>
+                                <ComboBoxItem Content="In Progress"/>
+                                <ComboBoxItem Content="Closed"/>
+                            </ComboBox>
+
+                            <ComboBox Grid.Column="4" x:Name="PriorityFilter" Width="150" Height="40"/>
+                            <ComboBox Grid.Column="6" x:Name="CategoryFilter" Width="150" Height="40"/>
+                        </Grid>
+
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="24"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="24"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Дата:" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextSecondary}" Margin="0,0,8,0" FontSize="13"/>
+                                <DatePicker x:Name="CreatedFromPicker" Width="130" Height="36"/>
+                                <TextBlock Text="—" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextMuted}" Margin="8,0"/>
+                                <DatePicker x:Name="CreatedToPicker" Width="130" Height="36"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <ComboBox x:Name="SavedSearchComboBox" SelectionChanged="SavedSearchComboBox_SelectionChanged" Width="180" DisplayMemberPath="Name" Height="36"/>
+                                <Button x:Name="SaveSearchButton" Click="SaveSearchButton_Click" Style="{StaticResource IconButton}" ToolTip="Сохранить фильтр" Margin="8,0,0,0">
+                                    <Path Data="{StaticResource Icon.Star}" Fill="#F59E0B" Width="16" Height="16" Stretch="Uniform"/>
+                                </Button>
+                                <Button x:Name="DeleteSearchButton" Click="DeleteSearchButton_Click" Style="{StaticResource IconButton}" ToolTip="Удалить фильтр" Margin="4,0,0,0">
+                                    <Path Data="{StaticResource Icon.Delete}" Fill="{DynamicResource Brush.TextMuted}" Width="16" Height="16" Stretch="Uniform"/>
+                                </Button>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="4" Orientation="Horizontal">
+                                <Button x:Name="DeleteTicketButton" Click="DeleteTicket_Click" Content="Удалить" Style="{StaticResource DangerButton}" Visibility="{Binding CurrentUser.Role, Converter={StaticResource RoleToVisibilityConverter}, ConverterParameter='Admin,Support'}"/>
+                                <Button x:Name="AssignTicketButton" Click="AssignTicket_Click" Content="Назначить" Style="{StaticResource SecondaryButton}" Margin="12,0,0,0" Visibility="{Binding CurrentUser.Role, Converter={StaticResource RoleToVisibilityConverter}, ConverterParameter='Admin,Support'}"/>
+                                <Button x:Name="EditTicketButton" Click="EditTicket_Click" Content="Редактировать" Style="{StaticResource SecondaryButton}" Margin="12,0,0,0" Visibility="{Binding CurrentUser.Role, Converter={StaticResource RoleToVisibilityConverter}, ConverterParameter='Admin,Support'}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="6" Orientation="Horizontal">
+                                <Button x:Name="ExportCsvButton" Click="ExportCsvButton_Click" Content="CSV" Style="{StaticResource SecondaryButton}" Padding="12,0"/>
+                                <Button x:Name="ExportPdfButton" Click="ExportPdfButton_Click" Content="PDF" Style="{StaticResource SecondaryButton}" Padding="12,0" Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="2" Background="{DynamicResource Brush.Surface}" Margin="32,24" CornerRadius="8" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="0">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="8" Opacity="0.06" ShadowDepth="2" Direction="270" Color="Black"/>
+                    </Border.Effect>
+
+                    <DataGrid x:Name="TicketsGrid" 
+                              AutoGenerateColumns="False" 
+                              IsReadOnly="True" 
+                              Background="Transparent" 
+                              BorderThickness="0" 
+                              RowHeaderWidth="0" 
+                              CanUserResizeRows="False" 
+                              GridLinesVisibility="None" 
+                              MouseDoubleClick="TicketsGrid_MouseDoubleClick" 
+                              RowHeight="52" 
+                              ColumnHeaderHeight="48"
+                              VirtualizingPanel.ScrollUnit="Pixel">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="70">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}"/>
+                                        <Setter Property="Padding" Value="20,0"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTemplateColumn Header="Статус" Width="130" SortMemberPath="Status">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{Binding Status, Converter={StaticResource StatusToColorConverter}}" CornerRadius="14" Padding="12,6" HorizontalAlignment="Left" Margin="20,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Status}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTextColumn Header="Тема" Binding="{Binding Title}" Width="*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+                                        <Setter Property="Padding" Value="20,0"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                        <Setter Property="FontSize" Value="14"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTextColumn Header="Категория" Binding="{Binding Category}" Width="140">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}"/>
+                                        <Setter Property="Padding" Value="20,0"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Setter Property="FontWeight" Value="Medium"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTemplateColumn Header="Приоритет" Width="120" SortMemberPath="Priority">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Priority}" FontWeight="Bold" Foreground="{DynamicResource Brush.TextPrimary}" Padding="20,0" VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTextColumn Header="Клиент" Binding="{Binding Client.Name}" Width="160">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+                                        <Setter Property="Padding" Value="20,0"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTextColumn Header="Исполнитель" Binding="{Binding Assignee.User.Username, TargetNullValue=—}" Width="140">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+                                        <Setter Property="Padding" Value="20,0"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTextColumn Header="Срок" Binding="{Binding DueAt, StringFormat=dd.MM.yy, TargetNullValue=—}" Width="100">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}"/>
+                                        <Setter Property="Padding" Value="20,0"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsOverdue}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Danger}"/>
+                                                <Setter Property="FontWeight" Value="Bold"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

@@ -1,0 +1,444 @@
+﻿<Window x:Class="КР_Ханников.Windows.NotificationSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Настройки уведомлений"
+        Height="520"
+        Width="480"
+        MinHeight="480"
+        MinWidth="420"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResizeWithGrip"
+        FontFamily="Segoe UI"
+        Background="{DynamicResource Brush.Background}">
+
+    <Window.Resources>
+        <Geometry x:Key="Icon.Bell">M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z</Geometry>
+
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource Brush.Primary}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="MinWidth" Value="100"/>
+            <Setter Property="Padding" Value="20,0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" 
+                                Background="{TemplateBinding Background}" 
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Brush.PrimaryDark}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Brush.PrimaryDark}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="MinWidth" Value="90"/>
+            <Setter Property="Padding" Value="16,0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource Brush.TextSecondary}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Brush.Background}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ToggleSwitch" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <ContentPresenter Grid.Column="0" VerticalAlignment="Center"/>
+
+                            <Border x:Name="track" 
+                                    Grid.Column="1"
+                                    Width="40" Height="22"
+                                    CornerRadius="11"
+                                    Background="{DynamicResource Brush.Border}"
+                                    Margin="12,0,0,0">
+                                <Border x:Name="thumb"
+                                        Width="18" Height="18"
+                                        CornerRadius="9"
+                                        Background="White"
+                                        HorizontalAlignment="Left"
+                                        Margin="2,0,0,0">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="4" Opacity="0.2" ShadowDepth="1"/>
+                                    </Border.Effect>
+                                </Border>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="track" Property="Background" Value="{DynamicResource Brush.Primary}"/>
+                                <Setter TargetName="thumb" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="thumb" Property="Margin" Value="0,0,2,0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SettingsSection" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style TargetType="Slider">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Primary}"/>
+        </Style>
+
+        <Storyboard x:Key="WindowFadeIn">
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" 
+                             From="0" To="1" 
+                             Duration="0:0:0.15"/>
+        </Storyboard>
+    </Window.Resources>
+
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="Loaded">
+            <BeginStoryboard Storyboard="{StaticResource WindowFadeIn}"/>
+        </EventTrigger>
+    </Window.Triggers>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" 
+                Background="{DynamicResource Brush.Surface}" 
+                Padding="20,16" 
+                BorderBrush="{DynamicResource Brush.Border}" 
+                BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0"
+                        Width="40"
+                        Height="40"
+                        CornerRadius="10"
+                        Background="{DynamicResource Brush.PrimaryLight}"
+                        Margin="0,0,14,0">
+                    <Path Data="{StaticResource Icon.Bell}"
+                          Fill="{DynamicResource Brush.Warning}"
+                          Width="20" Height="20"
+                          Stretch="Uniform"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"/>
+                </Border>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="Настройки уведомлений" 
+                               FontSize="18" 
+                               FontWeight="Bold" 
+                               Foreground="{DynamicResource Brush.TextPrimary}"/>
+                    <TextBlock Text="Выберите события для оповещений" 
+                               FontSize="12" 
+                               Foreground="{DynamicResource Brush.TextSecondary}" 
+                               Margin="0,2,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" 
+                      VerticalScrollBarVisibility="Auto"
+                      Padding="20,16">
+            <StackPanel>
+
+                <Border Style="{StaticResource SettingsSection}">
+                    <StackPanel>
+                        <TextBlock Text="📋 Уведомления о тикетах" 
+                                   FontWeight="SemiBold" 
+                                   FontSize="13"
+                                   Foreground="{DynamicResource Brush.TextPrimary}"
+                                   Margin="0,0,0,14"/>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Новые обращения" 
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource Brush.TextPrimary}"/>
+                                <TextBlock Text="Уведомления о поступлении новых тикетов (для поддержки)" 
+                                           FontSize="11"
+                                           Foreground="{DynamicResource Brush.TextMuted}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,2,10,0"/>
+                            </StackPanel>
+                            <CheckBox x:Name="NewTicketsCheckBox" 
+                                      Grid.Column="1"
+                                      Style="{StaticResource ToggleSwitch}"
+                                      VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Изменение статуса" 
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource Brush.TextPrimary}"/>
+                                <TextBlock Text="Уведомления при изменении статуса ваших тикетов" 
+                                           FontSize="11"
+                                           Foreground="{DynamicResource Brush.TextMuted}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,2,10,0"/>
+                            </StackPanel>
+                            <CheckBox x:Name="StatusChangedCheckBox" 
+                                      Grid.Column="1"
+                                      Style="{StaticResource ToggleSwitch}"
+                                      VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Новые комментарии" 
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource Brush.TextPrimary}"/>
+                                <TextBlock Text="Уведомления о комментариях к вашим тикетам" 
+                                           FontSize="11"
+                                           Foreground="{DynamicResource Brush.TextMuted}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,2,10,0"/>
+                            </StackPanel>
+                            <CheckBox x:Name="CommentsCheckBox" 
+                                      Grid.Column="1"
+                                      Style="{StaticResource ToggleSwitch}"
+                                      VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SettingsSection}">
+                    <StackPanel>
+                        <TextBlock Text="⏰ Напоминания" 
+                                   FontWeight="SemiBold" 
+                                   FontSize="13"
+                                   Foreground="{DynamicResource Brush.TextPrimary}"
+                                   Margin="0,0,0,14"/>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Приближение дедлайна" 
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource Brush.TextPrimary}"/>
+                                <TextBlock Text="Напоминание о скором истечении срока тикета" 
+                                           FontSize="11"
+                                           Foreground="{DynamicResource Brush.TextMuted}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,2,10,0"/>
+                            </StackPanel>
+                            <CheckBox x:Name="DueSoonCheckBox" 
+                                      Grid.Column="1"
+                                      Style="{StaticResource ToggleSwitch}"
+                                      VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid x:Name="DueSoonThresholdPanel">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="Напоминать за" 
+                                       Foreground="{DynamicResource Brush.TextSecondary}"
+                                       FontSize="12"
+                                       VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" 
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Center">
+                                <Border CornerRadius="6" 
+                                        BorderThickness="1" 
+                                        BorderBrush="{DynamicResource Brush.Border}"
+                                        Background="{DynamicResource Brush.Surface}">
+                                    <TextBox x:Name="DueSoonThresholdBox" 
+                                             Width="60" 
+                                             Height="32"
+                                             Text="60"
+                                             BorderThickness="0"
+                                             VerticalContentAlignment="Center"
+                                             HorizontalContentAlignment="Center"
+                                             FontSize="13"
+                                             Foreground="{DynamicResource Brush.TextPrimary}"
+                                             PreviewTextInput="NumberValidation"/>
+                                </Border>
+                                <TextBlock Text="минут" 
+                                           Foreground="{DynamicResource Brush.TextSecondary}"
+                                           FontSize="12"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SettingsSection}">
+                    <StackPanel>
+                        <TextBlock Text="⚙️ Системные уведомления" 
+                                   FontWeight="SemiBold" 
+                                   FontSize="13"
+                                   Foreground="{DynamicResource Brush.TextPrimary}"
+                                   Margin="0,0,0,14"/>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Звуковые уведомления" 
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource Brush.TextPrimary}"/>
+                                <TextBlock Text="Воспроизводить звук при получении уведомления" 
+                                           FontSize="11"
+                                           Foreground="{DynamicResource Brush.TextMuted}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,2,10,0"/>
+                            </StackPanel>
+                            <CheckBox x:Name="SoundCheckBox" 
+                                      Grid.Column="1"
+                                      Style="{StaticResource ToggleSwitch}"
+                                      IsChecked="True"
+                                      VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Всплывающие уведомления" 
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource Brush.TextPrimary}"/>
+                                <TextBlock Text="Показывать всплывающие уведомления в углу экрана" 
+                                           FontSize="11"
+                                           Foreground="{DynamicResource Brush.TextMuted}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,2,10,0"/>
+                            </StackPanel>
+                            <CheckBox x:Name="ToastCheckBox" 
+                                      Grid.Column="1"
+                                      Style="{StaticResource ToggleSwitch}"
+                                      IsChecked="True"
+                                      VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" 
+                Background="{DynamicResource Brush.Surface}" 
+                Padding="20,14" 
+                BorderBrush="{DynamicResource Brush.Border}" 
+                BorderThickness="0,1,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="Настройки применяются сразу после сохранения"
+                           Foreground="{DynamicResource Brush.TextMuted}"
+                           FontSize="11"
+                           VerticalAlignment="Center"/>
+
+                <StackPanel Grid.Column="1" 
+                            Orientation="Horizontal">
+                    <Button Content="Отмена" 
+                            Style="{StaticResource SecondaryButton}" 
+                            Click="Close_Click"
+                            IsCancel="True"/>
+                    <Button Content="Сохранить" 
+                            Style="{StaticResource PrimaryButton}" 
+                            Click="Save_Click"
+                            IsDefault="True"
+                            Margin="10,0,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

@@ -1,0 +1,246 @@
+﻿<Window x:Class="КР_Ханников.Windows.AddEmployeeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Добавить сотрудника"
+        Height="600"
+        Width="850"
+        MinHeight="520"
+        MinWidth="700"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize"
+        FontFamily="Segoe UI"
+        Background="{DynamicResource Brush.Background}">
+
+    <Window.Resources>
+        <Style x:Key="BtnPrimary" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource Brush.Primary}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="24,10"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Brush.PrimaryDark}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Brush.Border}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="BtnOutline" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+            <Setter Property="Padding" Value="24,10"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource Brush.TextSecondary}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource Brush.TextSecondary}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource Brush.Primary}"/>
+                                <Setter TargetName="border" Property="BorderThickness" Value="1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Storyboard x:Key="WindowFadeIn">
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.3"/>
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="10" To="0" Duration="0:0:0.3">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+    </Window.Resources>
+
+    <Window.RenderTransform>
+        <TranslateTransform/>
+    </Window.RenderTransform>
+
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="Loaded">
+            <BeginStoryboard Storyboard="{StaticResource WindowFadeIn}"/>
+        </EventTrigger>
+    </Window.Triggers>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{DynamicResource Brush.Surface}" Padding="30,20" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
+            <StackPanel>
+                <TextBlock Text="Добавление сотрудника" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource Brush.TextPrimary}"/>
+                <TextBlock Text="Создайте учетную запись для оператора поддержки или администратора" FontSize="14" Foreground="{DynamicResource Brush.TextSecondary}" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="30">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.5*"/>
+                <ColumnDefinition Width="30"/>
+                <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="{DynamicResource Brush.Surface}" CornerRadius="8" Padding="24" VerticalAlignment="Top">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="15" Direction="270" ShadowDepth="2" Opacity="0.1" Color="Black"/>
+                </Border.Effect>
+
+                <StackPanel>
+                    <StackPanel Margin="0,0,0,16">
+                        <TextBlock Text="Имя сотрудника (ФИО)" 
+                                   Foreground="{DynamicResource Brush.TextPrimary}" 
+                                   FontWeight="SemiBold" 
+                                   Margin="0,0,0,8"/>
+                        <TextBox x:Name="NameBox" 
+                                 ToolTip="Введите полное имя сотрудника"/>
+                    </StackPanel>
+
+                    <StackPanel Margin="0,0,0,16">
+                        <TextBlock Text="Логин" 
+                                   Foreground="{DynamicResource Brush.TextPrimary}" 
+                                   FontWeight="SemiBold" 
+                                   Margin="0,0,0,8"/>
+                        <TextBox x:Name="UsernameBox"
+                                 TextChanged="UsernameBox_TextChanged"
+                                 ToolTip="Уникальное имя пользователя для входа"/>
+                    </StackPanel>
+
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Пароль" 
+                                       Foreground="{DynamicResource Brush.TextPrimary}" 
+                                       FontWeight="SemiBold" 
+                                       Margin="0,0,0,8"/>
+                            <PasswordBox x:Name="PasswordBox"
+                                         Height="38"
+                                         VerticalContentAlignment="Center"
+                                         Padding="10,0"
+                                         ToolTip="Начальный пароль"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Роль" 
+                                       Foreground="{DynamicResource Brush.TextPrimary}" 
+                                       FontWeight="SemiBold" 
+                                       Margin="0,0,0,8"/>
+                            <ComboBox x:Name="RoleBox" SelectedIndex="0" Height="38" VerticalContentAlignment="Center" Padding="10,0">
+                                <ComboBoxItem Content="Support" />
+                                <ComboBoxItem Content="Admin" />
+                            </ComboBox>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="2" Background="{DynamicResource Brush.Surface}" CornerRadius="8" Padding="20" VerticalAlignment="Top">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="15" Direction="270" ShadowDepth="2" Opacity="0.1" Color="Black"/>
+                </Border.Effect>
+
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <TextBlock Text="👤" FontSize="18" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Справка по ролям" 
+                                   FontSize="16"
+                                   FontWeight="Bold" 
+                                   Foreground="{DynamicResource Brush.TextPrimary}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel Margin="0,0,0,20">
+                        <TextBlock Text="Support (Оператор)" Foreground="{DynamicResource Brush.TextPrimary}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBlock Text="Обрабатывает тикеты, отвечает клиентам, меняет статусы заявок." Foreground="{DynamicResource Brush.TextSecondary}" FontSize="13" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                        <TextBlock Text="Admin (Администратор)" Foreground="{DynamicResource Brush.TextPrimary}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBlock Text="Полный доступ: управление сотрудниками, настройки системы, просмотр статистики." Foreground="{DynamicResource Brush.TextSecondary}" FontSize="13" TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <Border Background="{DynamicResource Brush.SuccessSoft}" CornerRadius="6" Padding="12" BorderBrush="{DynamicResource Brush.Success}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Безопасность" FontWeight="Bold" Foreground="{DynamicResource Brush.Success}" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBlock Text="Используйте уникальные логины и сложные пароли для защиты данных." Foreground="{DynamicResource Brush.TextPrimary}" FontSize="13" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2" Background="{DynamicResource Brush.Surface}" Padding="20" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Отмена" 
+                        Click="Cancel_Click"
+                        Style="{StaticResource BtnOutline}"
+                        Width="120"
+                        Margin="0,0,12,0"/>
+
+                <Button Content="Добавить сотрудника" 
+                        Click="Save_Click"
+                        IsDefault="True"
+                        Style="{StaticResource BtnPrimary}"
+                        Width="180"/>
+            </StackPanel>
+        </Border>
+
+    </Grid>
+</Window>

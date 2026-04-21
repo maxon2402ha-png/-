@@ -1,0 +1,82 @@
+﻿<Window x:Class="КР_Ханников.Windows.ArticleEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Редактор статьи" 
+        Height="600" Width="800"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        FontFamily="Segoe UI">
+
+    <Border Background="White" CornerRadius="8" BorderThickness="1" BorderBrush="#E0E0E0">
+        <Border.Effect>
+            <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="0" Opacity="0.2"/>
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Padding="20" BorderBrush="#F0F0F0" BorderThickness="0,0,0,1">
+                <TextBlock x:Name="WindowTitle" Text="Новая статья" FontSize="18" FontWeight="Bold" Foreground="#2C3E50"/>
+            </Border>
+
+            <Border Grid.Row="1" Padding="20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0,0,0,15">
+                        <TextBlock Text="Заголовок" FontWeight="SemiBold" Foreground="#7F8C8D" Margin="0,0,0,5"/>
+                        <TextBox x:Name="TitleBox" Height="35" Padding="5" FontSize="14" VerticalContentAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1">
+                        <TextBlock Text="Содержание" FontWeight="SemiBold" Foreground="#7F8C8D" Margin="0,0,0,5"/>
+                        <TextBox x:Name="ContentBox" 
+                                 AcceptsReturn="True" 
+                                 TextWrapping="Wrap" 
+                                 VerticalScrollBarVisibility="Auto"
+                                 FontSize="14" 
+                                 Padding="10"
+                                 BorderBrush="#BDC3C7"
+                                 BorderThickness="1"
+                                 VerticalContentAlignment="Top"
+                                 Height="350"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="2" Padding="20" Background="#F8F9FA" CornerRadius="0,0,8,8" BorderBrush="#F0F0F0" BorderThickness="0,1,0,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Отмена" Click="Cancel_Click" Width="100" Height="35" Background="Transparent" BorderThickness="1" BorderBrush="#BDC3C7" Foreground="#7F8C8D" Margin="0,0,10,0" Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="4">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <Button Content="Сохранить" Click="Save_Click" Width="120" Height="35" Background="#3498DB" Foreground="White" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}" CornerRadius="4">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</Window>
