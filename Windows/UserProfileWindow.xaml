@@ -230,51 +230,75 @@
             <StackPanel>
 
                 <Border Style="{StaticResource Section}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-                        <Grid Grid.Column="0" Margin="0,0,20,0">
-                            <Ellipse Width="80" Height="80" Stroke="{DynamicResource Brush.Border}" StrokeThickness="1">
-                                <Ellipse.Fill>
-                                    <SolidColorBrush Color="{DynamicResource Color.Background}"/>
-                                </Ellipse.Fill>
-                            </Ellipse>
+                            <Grid Grid.Column="0" Margin="0,0,20,0">
+                                <Ellipse Width="80" Height="80" Stroke="{DynamicResource Brush.Border}" StrokeThickness="1">
+                                    <Ellipse.Fill>
+                                        <SolidColorBrush Color="{DynamicResource Color.Background}"/>
+                                    </Ellipse.Fill>
+                                </Ellipse>
 
-                            <Ellipse Width="80" Height="80">
-                                <Ellipse.Fill>
-                                    <ImageBrush x:Name="AvatarBrush" Stretch="UniformToFill"/>
-                                </Ellipse.Fill>
-                            </Ellipse>
+                                <Ellipse Width="80" Height="80">
+                                    <Ellipse.Fill>
+                                        <ImageBrush x:Name="ProfileImage" Stretch="UniformToFill"/>
+                                    </Ellipse.Fill>
+                                </Ellipse>
 
-                            <Path x:Name="DefaultAvatarIcon"
-                                  Data="{StaticResource Icon.User}" 
-                                  Fill="{DynamicResource Brush.TextSecondary}" 
-                                  Width="32" Height="32" 
-                                  Stretch="Uniform" 
-                                  HorizontalAlignment="Center" 
-                                  VerticalAlignment="Center"
-                                  IsHitTestVisible="False"/>
+                                <Path x:Name="DefaultAvatarIcon"
+                                      Data="{StaticResource Icon.User}" 
+                                      Fill="{DynamicResource Brush.TextSecondary}" 
+                                      Width="32" Height="32" 
+                                      Stretch="Uniform" 
+                                      HorizontalAlignment="Center" 
+                                      VerticalAlignment="Center"
+                                      IsHitTestVisible="False"/>
 
-                            <Button Style="{StaticResource AvatarButton}"
-                                    Click="ChangeAvatar_Click"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Bottom"
-                                    ToolTip="Сменить фото"
-                                    Margin="0,0,4,0"/>
+                                <Button Style="{StaticResource AvatarButton}"
+                                        Click="ChangePhoto_Click"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Bottom"
+                                        ToolTip="Сменить фото"
+                                        Margin="0,0,4,0"/>
+                            </Grid>
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock x:Name="DisplayNameText" Text="Иван Петров" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Brush.TextPrimary}"/>
+                                <TextBlock x:Name="UsernameText" Text="@ivan.petrov" FontSize="13" Foreground="{DynamicResource Brush.TextSecondary}" Margin="0,2,0,8"/>
+
+                                <Border x:Name="RoleBadge" Background="#EFF6FF" CornerRadius="4" Padding="8,4" HorizontalAlignment="Left">
+                                    <TextBlock x:Name="RoleText" Text="Администратор" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Primary}"/>
+                                </Border>
+                            </StackPanel>
                         </Grid>
 
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock x:Name="DisplayNameText" Text="Иван Петров" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Brush.TextPrimary}"/>
-                            <TextBlock x:Name="UsernameText" Text="@ivan.petrov" FontSize="13" Foreground="{DynamicResource Brush.TextSecondary}" Margin="0,2,0,8"/>
+                        <Border x:Name="UserStatsPanel" Margin="0,16,0,0" Padding="12" Background="{DynamicResource Brush.Background}" CornerRadius="6" Visibility="Collapsed">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="1"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
 
-                            <Border x:Name="RoleBadge" Background="#EFF6FF" CornerRadius="4" Padding="8,4" HorizontalAlignment="Left">
-                                <TextBlock x:Name="RoleText" Text="Администратор" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Primary}"/>
-                            </Border>
-                        </StackPanel>
-                    </Grid>
+                                <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                    <TextBlock x:Name="StatLabel1" Text="Рейтинг" FontSize="10" Foreground="{DynamicResource Brush.TextSecondary}" HorizontalAlignment="Center" Margin="0,0,0,2"/>
+                                    <TextBlock x:Name="StatValue1" Text="4.8" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource Brush.TextPrimary}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+
+                                <Border Grid.Column="1" Background="{DynamicResource Brush.Border}" Margin="0,5"/>
+
+                                <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                    <TextBlock x:Name="StatLabel2" Text="Закрыто тикетов" FontSize="10" Foreground="{DynamicResource Brush.TextSecondary}" HorizontalAlignment="Center" Margin="0,0,0,2"/>
+                                    <TextBlock x:Name="StatValue2" Text="142" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource Brush.TextPrimary}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
                 </Border>
 
                 <Border Style="{StaticResource Section}">
@@ -289,6 +313,9 @@
 
                         <TextBlock Text="Логин" Style="{StaticResource FieldLabel}"/>
                         <TextBox x:Name="UsernameBox" Margin="0,0,0,12"/>
+
+                        <TextBlock Text="Email для связи" Style="{StaticResource FieldLabel}"/>
+                        <TextBox x:Name="EmailBox" Margin="0,0,0,12"/>
 
                         <Grid Margin="0,8,0,0">
                             <Grid.ColumnDefinitions>
@@ -372,7 +399,7 @@
                             <TextBlock x:Name="PasswordMatchText" Text="Пароли совпадают" Foreground="#10B981" FontSize="11"/>
                         </StackPanel>
 
-                        <Button x:Name="ChangePasswordButton" Content="Обновить пароль" Click="ChangePassword_Click" Style="{StaticResource SecondaryButton}" IsEnabled="False" HorizontalAlignment="Left"/>
+                        <Button x:Name="ChangePasswordButton" Content="Обновить пароль" Click="ChangePassword_Click" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" IsEnabled="False"/>
                     </StackPanel>
                 </Border>
 
@@ -387,7 +414,7 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <Button Content="Отмена" Click="Cancel_Click" Style="{StaticResource SecondaryButton}" IsCancel="True"/>
+                    <Button Content="Отмена" Click="Cancel_Click" IsCancel="True" Style="{StaticResource SecondaryButton}"/>
                     <Button Content="Сохранить" Click="Save_Click" Style="{StaticResource PrimaryButton}" IsDefault="True" Margin="10,0,0,0"/>
                 </StackPanel>
             </Grid>

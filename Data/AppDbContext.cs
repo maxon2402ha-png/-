@@ -1,35 +1,33 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
-using System.IO;
 using КР_Ханников.Core;
 
 namespace КР_Ханников.Data
 {
     public class AppDbContext : DbContext
     {
-        // Основные таблицы
         public DbSet<User> Users { get; set; }
         public DbSet<Client> Clients { get; set; }
         public DbSet<Employee> Employees { get; set; }
         public DbSet<Ticket> Tickets { get; set; }
-
-        // Вспомогательные таблицы
         public DbSet<TicketHistory> TicketHistories { get; set; }
         public DbSet<Solution> Solutions { get; set; }
         public DbSet<Feedback> Feedbacks { get; set; }
         public DbSet<TicketComment> TicketComments { get; set; }
         public DbSet<KnowledgeArticle> KnowledgeBase { get; set; }
-
-        // Системные таблицы
         public DbSet<AuditLog> AuditLogs { get; set; }
-        public DbSet<IntegrationSettings> IntegrationSettings { get; set; }
-        public DbSet<ExternalLink> ExternalLinks { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<NotificationSettings> NotificationSettings { get; set; }
         public DbSet<SearchPreset> SearchPresets { get; set; }
         public DbSet<UserUiSettings> UserUiSettings { get; set; }
+
+        static AppDbContext()
+        {
+            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+        }
 
         public AppDbContext() { }
 
@@ -39,10 +37,8 @@ namespace КР_Ханников.Data
         {
             if (!optionsBuilder.IsConfigured)
             {
-                // ИЗМЕНЕНИЕ: Получаем строку подключения для PostgreSQL
                 var connectionString = Constants.Database.GetConnectionString();
 
-                // ИЗМЕНЕНИЕ: Используем провайдер Npgsql
                 optionsBuilder
                     .UseNpgsql(connectionString)
                     .LogTo(message => Debug.WriteLine($"[EF Core] {message}"),
@@ -55,11 +51,33 @@ namespace КР_Ханников.Data
             }
         }
 
+        // === Глобальные конвенции для дат (Отличное решение для PostgreSQL!) ===
+        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+        {
+            base.ConfigureConventions(configurationBuilder);
+
+            configurationBuilder
+                .Properties<DateTime>()
+                .HaveConversion<UtcDateTimeConverter>();
+
+            configurationBuilder
+                .Properties<DateTime?>()
+                .HaveConversion<NullableUtcDateTimeConverter>();
+        }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // --- User ---
+            foreach (var entity in modelBuilder.Model.GetEntityTypes())
+            {
+                entity.SetTableName(entity.DisplayName());
+                foreach (var property in entity.GetProperties())
+                {
+                    property.SetColumnName(property.Name);
+                }
+            }
+
             modelBuilder.Entity<User>(entity =>
             {
                 entity.HasKey(u => u.Id);
@@ -69,13 +87,11 @@ namespace КР_Ханников.Data
                 entity.Property(u => u.Role).IsRequired().HasDefaultValue(Constants.UserRoles.Client);
                 entity.Property(u => u.AvatarPath).HasMaxLength(500);
                 entity.Property(u => u.Email).HasMaxLength(100);
-                // CURRENT_TIMESTAMP работает и в PostgreSQL
                 entity.Property(u => u.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.Ignore(u => u.Employee);
                 entity.Ignore(u => u.Client);
             });
 
-            // --- Employee ---
             modelBuilder.Entity<Employee>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -84,7 +100,6 @@ namespace КР_Ханников.Data
                 entity.HasOne(e => e.User).WithOne().HasForeignKey<Employee>(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
             });
 
-            // --- Client ---
             modelBuilder.Entity<Client>(entity =>
             {
                 entity.HasKey(c => c.Id);
@@ -92,7 +107,6 @@ namespace КР_Ханников.Data
                 entity.HasOne(c => c.User).WithOne().HasForeignKey<Client>(c => c.UserId).OnDelete(DeleteBehavior.Cascade);
             });
 
-            // --- Ticket ---
             modelBuilder.Entity<Ticket>(entity =>
             {
                 entity.HasKey(t => t.Id);
@@ -103,12 +117,10 @@ namespace КР_Ханников.Data
                 entity.Property(t => t.Category).HasConversion<int>();
 
                 entity.HasOne(t => t.Client).WithMany(c => c.Tickets).HasForeignKey(t => t.ClientId).OnDelete(DeleteBehavior.Cascade);
-                entity.HasOne(t => t.User).WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.SetNull);
                 entity.HasOne(t => t.Assignee).WithMany().HasForeignKey(t => t.AssigneeEmployeeId).OnDelete(DeleteBehavior.SetNull);
                 entity.HasOne(t => t.Solution).WithOne(s => s.Ticket).HasForeignKey<Solution>(s => s.TicketId);
             });
 
-            // --- Solution ---
             modelBuilder.Entity<Solution>(entity =>
             {
                 entity.HasKey(s => s.Id);
@@ -117,7 +129,6 @@ namespace КР_Ханников.Data
                 entity.HasOne(s => s.Ticket).WithOne(t => t.Solution).HasForeignKey<Solution>(s => s.TicketId).OnDelete(DeleteBehavior.Cascade);
             });
 
-            // --- TicketHistory ---
             modelBuilder.Entity<TicketHistory>(entity =>
             {
                 entity.HasKey(h => h.Id);
@@ -126,7 +137,6 @@ namespace КР_Ханников.Data
                 entity.HasOne<Ticket>().WithMany(t => t.History).HasForeignKey(h => h.TicketId).OnDelete(DeleteBehavior.Cascade);
             });
 
-            // --- Feedback ---
             modelBuilder.Entity<Feedback>(entity =>
             {
                 entity.HasKey(f => f.Id);
@@ -138,7 +148,6 @@ namespace КР_Ханников.Data
                 entity.HasOne(f => f.Support).WithMany().HasForeignKey(f => f.SupportId).OnDelete(DeleteBehavior.SetNull);
             });
 
-            // --- KnowledgeArticle ---
             modelBuilder.Entity<KnowledgeArticle>(entity =>
             {
                 entity.HasKey(k => k.Id);
@@ -146,7 +155,6 @@ namespace КР_Ханников.Data
                 entity.Property(k => k.Content).IsRequired();
             });
 
-            // --- AuditLog ---
             modelBuilder.Entity<AuditLog>(entity =>
             {
                 entity.HasKey(a => a.Id);
@@ -155,7 +163,6 @@ namespace КР_Ханников.Data
                 entity.Property(a => a.Timestamp).HasDefaultValueSql("CURRENT_TIMESTAMP");
             });
 
-            // --- TicketComment ---
             modelBuilder.Entity<TicketComment>(entity =>
             {
                 entity.HasKey(c => c.Id);
@@ -174,32 +181,6 @@ namespace КР_Ханников.Data
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
-            // --- IntegrationSettings ---
-            modelBuilder.Entity<IntegrationSettings>(entity =>
-            {
-                entity.HasKey(x => x.Id);
-                entity.Property(x => x.BaseUrl).HasMaxLength(500).IsRequired();
-                entity.Property(x => x.ProjectKey).HasMaxLength(100);
-                entity.Property(x => x.BoardOrListId).HasMaxLength(200);
-                entity.Property(x => x.AuthLogin).HasMaxLength(200);
-                entity.Property(x => x.AuthSecret).HasMaxLength(2000);
-                entity.Property(x => x.DefaultIssueType).HasMaxLength(100);
-                entity.Property(x => x.DefaultPriority).HasMaxLength(50);
-                entity.HasIndex(x => x.System).IsUnique();
-            });
-
-            // --- ExternalLink ---
-            modelBuilder.Entity<ExternalLink>(entity =>
-            {
-                entity.HasKey(x => x.Id);
-                entity.Property(x => x.ExternalId).HasMaxLength(200).IsRequired();
-                entity.Property(x => x.ExternalKey).HasMaxLength(200);
-                entity.Property(x => x.Url).HasMaxLength(1000);
-                entity.Property(x => x.ContentHash).HasMaxLength(200);
-                entity.HasIndex(x => new { x.TicketId, x.System }).IsUnique();
-            });
-
-            // --- Notification ---
             modelBuilder.Entity<Notification>(entity =>
             {
                 entity.HasKey(n => n.Id);
@@ -211,7 +192,6 @@ namespace КР_Ханников.Data
                 entity.HasOne(n => n.Ticket).WithMany().HasForeignKey(n => n.TicketId).OnDelete(DeleteBehavior.SetNull);
             });
 
-            // --- NotificationSettings ---
             modelBuilder.Entity<NotificationSettings>(entity =>
             {
                 entity.HasKey(s => s.Id);
@@ -222,7 +202,6 @@ namespace КР_Ханников.Data
                 entity.HasOne(s => s.User).WithOne().HasForeignKey<NotificationSettings>(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
             });
 
-            // --- SearchPreset ---
             modelBuilder.Entity<SearchPreset>(entity =>
             {
                 entity.HasKey(x => x.Id);
@@ -232,7 +211,6 @@ namespace КР_Ханников.Data
                 entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
             });
 
-            // --- UserUiSettings (Персонализация) ---
             modelBuilder.Entity<UserUiSettings>(entity =>
             {
                 entity.HasKey(x => x.Id);
@@ -251,5 +229,22 @@ namespace КР_Ханников.Data
                 entity.HasOne(x => x.User).WithOne().HasForeignKey<UserUiSettings>(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
             });
         }
+    }
+
+    // --- Безопасные конвертеры для PostgreSQL ---
+    public class UtcDateTimeConverter : ValueConverter<DateTime, DateTime>
+    {
+        public UtcDateTimeConverter() : base(
+            v => v == DateTime.MinValue ? DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc) : v.ToUniversalTime(),
+            v => DateTime.SpecifyKind(v, DateTimeKind.Utc))
+        { }
+    }
+
+    public class NullableUtcDateTimeConverter : ValueConverter<DateTime?, DateTime?>
+    {
+        public NullableUtcDateTimeConverter() : base(
+            v => v.HasValue ? (v.Value == DateTime.MinValue ? DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc) : v.Value.ToUniversalTime()) : v,
+            v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v)
+        { }
     }
 }

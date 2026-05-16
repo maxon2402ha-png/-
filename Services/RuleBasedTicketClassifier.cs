@@ -8,7 +8,7 @@ namespace КР_Ханников.Services
 {
     public interface ITicketClassifier
     {
-        (TicketCategory category, TicketPriority priority) Classify(string title, string description);
+        (TicketCategory category, TicketPriority priority, bool isMlUsed) Classify(string title, string description);
     }
 
     /// <summary>
@@ -34,8 +34,8 @@ namespace КР_Ханников.Services
         private static readonly string[] HighWords = { "частично не работает", "нельзя работать", "очень медленно", "задержка", "ошибка", "деградация", "degradation", "важно", "быстрее" };
         private static readonly string[] LowWords = { "вопрос", "как", "инструкция", "улучшить", "предложение", "идея", "фича", "feature", "запрос на улучшение", "не горит", "косметика" };
 
-        public (TicketCategory category, TicketPriority priority) Classify(string title, string description)
-        {
+        public (TicketCategory category, TicketPriority priority, bool isMlUsed) Classify(string title, string description)
+            {
             // 1. Нормализация текста (убираем лишние пробелы, приводим к нижнему регистру)
             var raw = $"{title} {description}";
             var text = (raw ?? string.Empty).ToLowerInvariant();
@@ -66,7 +66,7 @@ namespace КР_Ханников.Services
             else if (ContainsAny(norm, LowWords))
                 priorityResult = TicketPriority.Low;
 
-            return (categoryResult, priorityResult);
+            return (categoryResult, priorityResult, false);
         }
 
         private static bool ContainsAny(string text, IEnumerable<string> words)

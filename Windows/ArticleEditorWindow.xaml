@@ -22,7 +22,8 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" Padding="20" BorderBrush="#F0F0F0" BorderThickness="0,0,0,1">
+            <Border Grid.Row="0" Padding="20" BorderBrush="#F0F0F0" BorderThickness="0,0,0,1" 
+                    Background="Transparent" MouseLeftButtonDown="Header_MouseLeftButtonDown">
                 <TextBlock x:Name="WindowTitle" Text="Новая статья" FontSize="18" FontWeight="Bold" Foreground="#2C3E50"/>
             </Border>
 
@@ -56,7 +57,7 @@
 
             <Border Grid.Row="2" Padding="20" Background="#F8F9FA" CornerRadius="0,0,8,8" BorderBrush="#F0F0F0" BorderThickness="0,1,0,0">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="Отмена" Click="Cancel_Click" Width="100" Height="35" Background="Transparent" BorderThickness="1" BorderBrush="#BDC3C7" Foreground="#7F8C8D" Margin="0,0,10,0" Cursor="Hand">
+                    <Button Content="Отмена" Click="Cancel_Click" Width="100" Height="35" Background="Transparent" BorderThickness="1" BorderBrush="#BDC3C7" Foreground="#7F8C8D" Margin="0,0,10,0" Cursor="Hand" IsCancel="True">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="4">
@@ -66,7 +67,7 @@
                         </Button.Template>
                     </Button>
 
-                    <Button Content="Сохранить" Click="Save_Click" Width="120" Height="35" Background="#3498DB" Foreground="White" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand">
+                    <Button Content="Сохранить" Click="Save_Click" Width="120" Height="35" Background="#3498DB" Foreground="White" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand" IsDefault="True">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border Background="{TemplateBinding Background}" CornerRadius="4">

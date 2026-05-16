@@ -7,12 +7,19 @@
              xmlns:core="clr-namespace:КР_Ханников.Core"
              xmlns:converters="clr-namespace:КР_Ханников.Converters"
              mc:Ignorable="d"
-             d:DesignHeight="1000" d:DesignWidth="1200"
+             d:DesignHeight="1200" d:DesignWidth="1200"
              FontFamily="Segoe UI"
              Background="{DynamicResource Brush.Background}">
 
     <UserControl.Resources>
         <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
+
+        <Geometry x:Key="Icon.Ticket">M22 10V6c0-1.1-.9-2-2-2H4c-1.1 0-1.99.9-1.99 2v4c1.1 0 1.99.9 1.99 2s-.89 2-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-4c-1.1 0-2-.9-2-2s.9-2 2-2zm-2-1.46c-1.19.69-2 1.99-2 3.46s.81 2.77 2 3.46V18H4v-2.54c1.19-.69 2-1.99 2-3.46s-.81-2.77-2-3.46V6h16v2.54zM11 15h2v2h-2zm0-4h2v2h-2zm0-4h2v2h-2z</Geometry>
+        <Geometry x:Key="Icon.Lightning">M13 2.05v3.03c3.39.49 6 3.39 6 6.92 0 .9-.22 1.75-.61 2.5l2.16 2.16C21.47 15.31 22 13.71 22 12c0-5.16-3.95-9.39-9-9.95zM4.93 4.93l2.16 2.16C6.22 7.84 6 8.9 6 10c0 3.31 2.69 6 6 6 1.1 0 2.16-.32 3.01-.88l2.16 2.16C15.82 18.33 14.04 19 12 19c-4.97 0-9-4.03-9-9 0-2.04.67-3.82 1.93-5.07zM11 2v4l3-3-3-3zm0 18v4l3-3-3-3z</Geometry>
+        <Geometry x:Key="Icon.Clock">M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z</Geometry>
+        <Geometry x:Key="Icon.CheckCircle">M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z</Geometry>
+        <Geometry x:Key="Icon.Chart">M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z</Geometry>
+        <Geometry x:Key="Icon.Percent">M18.5 3.5L5.5 20.5l2 2L20.5 5.5l-2-2zM7 9c1.66 0 3-1.34 3-3S8.66 3 7 3 4 4.34 4 6s1.34 3 3 3zm0-4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm10 14c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0 4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z</Geometry>
 
         <Style x:Key="PrimaryButton" TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource Brush.Primary}"/>
@@ -35,6 +42,10 @@
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="border" Property="Background" Value="{DynamicResource Brush.PrimaryDark}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Brush.Border}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -115,7 +126,13 @@
 
         <Style x:Key="KpiCard" TargetType="Border" BasedOn="{StaticResource Card}">
             <Setter Property="Padding" Value="20,16"/>
-            <Setter Property="MinHeight" Value="110"/>
+            <Setter Property="MinHeight" Value="100"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource Brush.PrimaryLight}"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="FilterLabel" TargetType="TextBlock">
@@ -134,11 +151,11 @@
         <Style x:Key="KpiLabel" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}"/>
             <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
 
         <Style x:Key="KpiValue" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="32"/>
+            <Setter Property="FontSize" Value="28"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Margin" Value="0,6,0,0"/>
         </Style>
@@ -316,42 +333,60 @@
                 <UniformGrid x:Name="KpiSection" Columns="6" Margin="0,0,0,24">
                     <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
                         <StackPanel>
-                            <TextBlock Text="Всего" Style="{StaticResource KpiLabel}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Path Data="{StaticResource Icon.Ticket}" Fill="{DynamicResource Brush.TextSecondary}" Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center"/>
+                                <TextBlock Text="Всего" Style="{StaticResource KpiLabel}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
                             <TextBlock Text="{Binding KpiTotal}" Style="{StaticResource KpiValue}" Foreground="{DynamicResource Brush.TextPrimary}"/>
                         </StackPanel>
                     </Border>
 
                     <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
                         <StackPanel>
-                            <TextBlock Text="Открыто" Style="{StaticResource KpiLabel}"/>
-                            <TextBlock Text="{Binding KpiOpen}" Style="{StaticResource KpiValue}" Foreground="{DynamicResource Brush.Status.Open}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Path Data="{StaticResource Icon.Lightning}" Fill="#F59E0B" Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center"/>
+                                <TextBlock Text="Открыто" Style="{StaticResource KpiLabel}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding KpiOpen}" Style="{StaticResource KpiValue}" Foreground="#F59E0B"/>
                         </StackPanel>
                     </Border>
 
                     <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
                         <StackPanel>
-                            <TextBlock Text="В работе" Style="{StaticResource KpiLabel}"/>
-                            <TextBlock Text="{Binding KpiInProgress}" Style="{StaticResource KpiValue}" Foreground="{DynamicResource Brush.Status.InProgress}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Path Data="{StaticResource Icon.Clock}" Fill="#3B82F6" Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center"/>
+                                <TextBlock Text="В работе" Style="{StaticResource KpiLabel}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding KpiInProgress}" Style="{StaticResource KpiValue}" Foreground="#3B82F6"/>
                         </StackPanel>
                     </Border>
 
                     <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
                         <StackPanel>
-                            <TextBlock Text="Закрыто" Style="{StaticResource KpiLabel}"/>
-                            <TextBlock Text="{Binding KpiClosed}" Style="{StaticResource KpiValue}" Foreground="{DynamicResource Brush.Status.Closed}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Path Data="{StaticResource Icon.CheckCircle}" Fill="#10B981" Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center"/>
+                                <TextBlock Text="Закрыто" Style="{StaticResource KpiLabel}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding KpiClosed}" Style="{StaticResource KpiValue}" Foreground="#10B981"/>
                         </StackPanel>
                     </Border>
 
                     <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
                         <StackPanel>
-                            <TextBlock Text="Ср. время" Style="{StaticResource KpiLabel}"/>
-                            <TextBlock Text="{Binding KpiAvgResolutionText}" Style="{StaticResource KpiValue}" FontSize="24" Foreground="{DynamicResource Brush.Accent}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Path Data="{StaticResource Icon.Chart}" Fill="{DynamicResource Brush.Accent}" Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center"/>
+                                <TextBlock Text="Ср. время (ч)" Style="{StaticResource KpiLabel}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding KpiAvgResolutionText}" Style="{StaticResource KpiValue}" Foreground="{DynamicResource Brush.Accent}"/>
                         </StackPanel>
                     </Border>
 
                     <Border Style="{StaticResource KpiCard}">
                         <StackPanel>
-                            <TextBlock Text="Решено (%)" Style="{StaticResource KpiLabel}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Path Data="{StaticResource Icon.Percent}" Fill="{DynamicResource Brush.TextSecondary}" Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center"/>
+                                <TextBlock Text="Решено (%)" Style="{StaticResource KpiLabel}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
                             <TextBlock Text="{Binding KpiResolvedPercentText}" Style="{StaticResource KpiValue}" Foreground="{DynamicResource Brush.TextPrimary}"/>
                         </StackPanel>
                     </Border>
@@ -414,7 +449,7 @@
                     <Border Grid.Column="0" Style="{StaticResource Card}">
                         <DockPanel>
                             <Grid DockPanel.Dock="Top" Margin="0,0,0,20">
-                                <TextBlock Text="Загрузка сотрудников" Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="Распределение по сотрудникам" Style="{StaticResource SectionTitle}"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                     <ComboBox x:Name="AssigneeSortCombo" Style="{StaticResource CompactComboBox}" Width="140" Margin="0,0,10,0" SelectionChanged="Sort_SelectionChanged">
                                         <ComboBoxItem Content="По нагрузке" IsSelected="True"/>
@@ -452,6 +487,119 @@
                         </DockPanel>
                     </Border>
                 </Grid>
+
+                <Border Style="{StaticResource Card}" Margin="0,0,0,24">
+                    <DockPanel>
+                        <TextBlock Text="Матрица компетенций и нагрузки (Performance Matrix)" DockPanel.Dock="Top" Style="{StaticResource SectionTitle}" Margin="0,0,0,20"/>
+
+                        <DataGrid x:Name="PerformanceMatrixGrid"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="None"
+                                  HorizontalGridLinesBrush="{DynamicResource Brush.Border}"
+                                  VerticalGridLinesBrush="Transparent"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  RowHeaderWidth="0"
+                                  CanUserResizeRows="False"
+                                  SelectionMode="Single"
+                                  RowHeight="48"
+                                  ColumnHeaderHeight="42">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ИНЖЕНЕР" Binding="{Binding Name}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+                                            <Setter Property="Padding" Value="12,0"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Header="В РАБОТЕ" Binding="{Binding ActiveTickets}" Width="100">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}"/>
+                                            <Setter Property="Padding" Value="12,0"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+
+                                <DataGridTemplateColumn Header="НАГРУЗКА (ИНДЕКС)" Width="160">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0">
+                                                <TextBlock Text="{Binding WorkloadPoints}" FontWeight="Bold" Foreground="{DynamicResource Brush.TextPrimary}"/>
+                                                <TextBlock Text=" / 20 баллов" Foreground="{DynamicResource Brush.TextMuted}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn Header="СТАТУС" Width="140">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border CornerRadius="6" Padding="10,4" HorizontalAlignment="Left" Margin="12,0">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="{DynamicResource Brush.SuccessLight}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsOverloaded}" Value="True">
+                                                                <Setter Property="Background" Value="#FEE2E2"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsWarning}" Value="True">
+                                                                <Setter Property="Background" Value="#FEF3C7"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Text="{Binding WorkloadStatus}" FontSize="12" FontWeight="Bold">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{DynamicResource Brush.Success}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsOverloaded}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Danger}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsWarning}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Warning}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTextColumn Header="SLA (%)" Binding="{Binding SlaText}" Width="100">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+                                            <Setter Property="Padding" Value="12,0"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Header="ART (ч)" Binding="{Binding ArtText}" Width="100">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}"/>
+                                            <Setter Property="Padding" Value="12,0"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Border>
 
                 <Border x:Name="TableSection" Style="{StaticResource Card}">
                     <DockPanel>

@@ -1,9 +1,9 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using КР_Ханников.Core;
 using КР_Ханников.Data;
 
@@ -18,37 +18,53 @@ namespace КР_Ханников.Services
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        // --- ЛОГИКА АВТОМАТИЗАЦИИ ---
+        // --- ЛОГИКА АВТОМАТИЗАЦИИ И БАЛАНСИРОВКИ НАГРУЗКИ ---
 
         /// <summary>
-        /// Выбирает наименее загруженного сотрудника (Support) для назначения.
+        /// Выбирает сотрудника для назначения на основе KPI (наименьший индекс нагрузки Workload).
         /// </summary>
-        private async Task<int?> GetBestEmployeeForTicketAsync(CancellationToken ct)
+        private async Task<int?> GetBestEmployeeForTicketAsync(TicketPriority newTicketPriority, CancellationToken ct)
         {
-            // Ищем всех сотрудников с ролью Support
             var candidates = await _context.Employees
-                .Include(e => e.User) // Чтобы проверить роль
+                .Include(e => e.User)
                 .Where(e => e.User.Role == Constants.UserRoles.Support)
                 .ToListAsync(ct);
 
             if (!candidates.Any()) return null;
 
-            // Считаем нагрузку: сколько у каждого открытых тикетов
-            var bestCandidate = candidates
-                .Select(emp => new
-                {
-                    Employee = emp,
-                    // Считаем активные тикеты (не закрытые)
-                    ActiveCount = _context.Tickets.Count(t => t.AssigneeEmployeeId == emp.Id && t.Status != Constants.TicketStatus.Closed)
-                })
-                .OrderBy(x => x.ActiveCount) // Сортируем по возрастанию нагрузки
-                .FirstOrDefault();
+            // Вытаскиваем все активные тикеты для расчета текущей нагрузки
+            var activeTickets = await _context.Tickets
+                .Where(t => t.Status != Constants.TicketStatus.Closed && t.Status != Constants.TicketStatus.Resolved && t.AssigneeEmployeeId != null)
+                .Select(t => new { t.AssigneeEmployeeId, t.Priority })
+                .ToListAsync(ct);
 
-            return bestCandidate?.Employee.Id;
+            // Создаем словарь нагрузок сотрудников
+            var workloadDict = candidates.ToDictionary(c => c.Id, c => 0);
+
+            // Подсчитываем текущую нагрузку в баллах для каждого
+            foreach (var t in activeTickets)
+            {
+                if (t.AssigneeEmployeeId.HasValue && workloadDict.ContainsKey(t.AssigneeEmployeeId.Value))
+                {
+                    workloadDict[t.AssigneeEmployeeId.Value] += KpiService.GetTicketWeight(t.Priority);
+                }
+            }
+
+            // Ищем сотрудника с минимальным Workload Index
+            var bestCandidate = workloadDict.OrderBy(kvp => kvp.Value).First();
+            int newTicketWeight = KpiService.GetTicketWeight(newTicketPriority);
+
+            // Если даже у самого свободного сотрудника превышен лимит нагрузки - оставляем тикет нераспределенным
+            if (bestCandidate.Value + newTicketWeight > KpiService.MaxWorkloadPoints)
+            {
+                return null;
+            }
+
+            return bestCandidate.Key;
         }
 
         /// <summary>
-        /// Рассчитывает дедлайн на основе приоритета.
+        /// Рассчитывает дедлайн на основе приоритета (SLA).
         /// </summary>
         private DateTime CalculateDeadline(TicketPriority priority)
         {
@@ -63,28 +79,30 @@ namespace КР_Ханников.Services
             };
         }
 
-        // --- CRUD ---
+        // --- CRUD И БИЗНЕС-ЛОГИКА ---
 
         public async Task<Ticket> CreateAsync(
             int clientId,
             string title,
             string description,
-            DateTime? manualDueAt = null, // Если null, рассчитаем автоматически
+            DateTime? manualDueAt = null,
             int? authorUserId = null,
             CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(title))
                 throw new ArgumentException("Title is required", nameof(title));
 
-            // 1. Авто-классификация (ML)
+            // 1. Авто-классификация (ML / Правила)
             var classifier = new TicketClassifier(new RuleBasedTicketClassifier());
-            var (category, priority) = classifier.Classify(title, description ?? string.Empty);
+            var (category, priority, isMlUsed) = classifier.Classify(title, description ?? string.Empty);
 
-            // 2. Авто-расчет дедлайна (если не задан вручную)
+            string aiMethodName = isMlUsed ? "Нейросеть (ML.NET)" : "Анализ ключевых слов";
+
+            // 2. Авто-расчет дедлайна
             var dueAt = manualDueAt ?? CalculateDeadline(priority);
 
-            // 3. Авто-назначение сотрудника
-            int? assigneeId = await GetBestEmployeeForTicketAsync(ct);
+            // 3. Авто-назначение сотрудника (с учетом Индекса нагрузки)
+            int? assigneeId = await GetBestEmployeeForTicketAsync(priority, ct);
             string status = assigneeId.HasValue ? Constants.TicketStatus.InProgress : Constants.TicketStatus.Open;
 
             var ticket = new Ticket
@@ -98,37 +116,99 @@ namespace КР_Ханников.Services
                 UserId = authorUserId,
                 Category = category,
                 Priority = priority,
-                AssigneeEmployeeId = assigneeId
+                AssigneeEmployeeId = assigneeId,
+                History = new List<TicketHistory>()
             };
 
-            await _context.Tickets.AddAsync(ticket, ct);
-
-            // Сначала сохраняем тикет, чтобы получить ID
-            await _context.SaveChangesAsync(ct);
-
-            // 4. История: Запись о создании и авто-действиях
-            await _context.TicketHistories.AddAsync(new TicketHistory
+            // 4. Пишем историю классификации
+            ticket.History.Add(new TicketHistory
             {
-                TicketId = ticket.Id,
-                Action = "Создание (Auto)",
-                Details = $"Авто-классификация: {category}/{priority}. Срок: {dueAt:dd.MM HH:mm}",
+                Action = "Умная классификация",
+                Details = $"Алгоритм: {aiMethodName}\nКатегория: {category} | Приоритет: {priority}\nСрок (SLA): {dueAt:dd.MM.yy HH:mm}",
                 Timestamp = DateTime.UtcNow
-            }, ct);
+            });
 
             if (assigneeId.HasValue)
             {
                 var empName = await _context.Employees.Where(e => e.Id == assigneeId).Select(e => e.Name).FirstOrDefaultAsync(ct);
+                int weight = KpiService.GetTicketWeight(priority);
+
+                ticket.History.Add(new TicketHistory
+                {
+                    Action = "Авто-маршрутизация",
+                    Details = $"Назначен оператор: {empName} (Влияние на нагрузку: +{weight} баллов)",
+                    Timestamp = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                ticket.History.Add(new TicketHistory
+                {
+                    Action = "Очередь",
+                    Details = "Система не смогла назначить тикет: все инженеры превысили лимит нагрузки. Тикет помещен в очередь (Open).",
+                    Timestamp = DateTime.UtcNow
+                });
+            }
+
+            await _context.Tickets.AddAsync(ticket, ct);
+            await _context.SaveChangesAsync(ct);
+
+            return ticket;
+        }
+
+        public async Task<bool> AssignAsync(int ticketId, int employeeId, CancellationToken ct = default)
+        {
+            var t = await _context.Tickets.FirstOrDefaultAsync(x => x.Id == ticketId, ct);
+            if (t == null) return false;
+
+            var emp = await _context.Employees.AsNoTracking().FirstOrDefaultAsync(e => e.Id == employeeId, ct);
+            if (emp == null) throw new InvalidOperationException("Сотрудник не найден");
+
+            // --- ИНТЕЛЛЕКТУАЛЬНАЯ ЗАЩИТА ОТ ПЕРЕГРУЗКИ (KPI) ---
+            var kpiService = new KpiService(_context);
+            int currentLoad = await kpiService.CalculateEmployeeWorkloadAsync(employeeId);
+            int ticketWeight = KpiService.GetTicketWeight(t.Priority);
+
+            // Если мы пытаемся назначить тикет на нового сотрудника и это вызовет перегруз
+            if (t.AssigneeEmployeeId != employeeId && (currentLoad + ticketWeight > KpiService.MaxWorkloadPoints))
+            {
+                throw new InvalidOperationException(
+                    $"ВНИМАНИЕ: Назначение заблокировано!\n\n" +
+                    $"Сотрудник перегружен. Текущая нагрузка: {currentLoad} / {KpiService.MaxWorkloadPoints} баллов.\n" +
+                    $"Вес заявки: {ticketWeight} баллов (Приоритет: {t.Priority}).\n\n" +
+                    $"Назначьте заявку на другого специалиста.");
+            }
+            // ----------------------------------------------------
+
+            var oldStatus = t.Status;
+            t.AssigneeEmployeeId = employeeId;
+
+            if (t.Status == Constants.TicketStatus.Open)
+                t.Status = Constants.TicketStatus.InProgress;
+
+            t.UpdatedAt = DateTime.UtcNow;
+
+            await _context.TicketHistories.AddAsync(new TicketHistory
+            {
+                TicketId = t.Id,
+                Action = "Назначение",
+                Details = $"Назначен сотрудник: {emp.Name}. Текущая нагрузка сотрудника: {currentLoad + ticketWeight} баллов.",
+                Timestamp = DateTime.UtcNow
+            }, ct);
+
+            if (oldStatus != t.Status)
+            {
                 await _context.TicketHistories.AddAsync(new TicketHistory
                 {
-                    TicketId = ticket.Id,
-                    Action = "Авто-назначение",
-                    Details = $"Назначен наименее загруженный оператор: {empName}",
+                    TicketId = t.Id,
+                    Action = "Статус",
+                    Details = $"{oldStatus} -> {t.Status}",
                     Timestamp = DateTime.UtcNow
                 }, ct);
             }
 
             await _context.SaveChangesAsync(ct);
-            return ticket;
+            return true;
         }
 
         public async Task<Ticket?> UpdateAsync(
@@ -148,7 +228,6 @@ namespace КР_Ханников.Services
             if (!string.IsNullOrWhiteSpace(title)) t.Title = title.Trim();
             if (description != null) t.Description = description;
 
-            // Разрешаем менять дедлайн вручную
             if (dueAt.HasValue) t.DueAt = dueAt;
 
             t.UpdatedAt = DateTime.UtcNow;
@@ -171,46 +250,6 @@ namespace КР_Ханников.Services
             if (t == null) return false;
 
             _context.Tickets.Remove(t);
-            // Историю можно не писать при физическом удалении, или использовать Soft Delete
-            await _context.SaveChangesAsync(ct);
-            return true;
-        }
-
-        public async Task<bool> AssignAsync(int ticketId, int employeeId, CancellationToken ct = default)
-        {
-            var t = await _context.Tickets.FirstOrDefaultAsync(x => x.Id == ticketId, ct);
-            if (t == null) return false;
-
-            var emp = await _context.Employees.AsNoTracking().FirstOrDefaultAsync(e => e.Id == employeeId, ct);
-            if (emp == null) throw new InvalidOperationException("Сотрудник не найден");
-
-            var oldStatus = t.Status;
-            t.AssigneeEmployeeId = employeeId;
-
-            if (t.Status == Constants.TicketStatus.Open)
-                t.Status = Constants.TicketStatus.InProgress;
-
-            t.UpdatedAt = DateTime.UtcNow;
-
-            await _context.TicketHistories.AddAsync(new TicketHistory
-            {
-                TicketId = t.Id,
-                Action = "Назначение",
-                Details = $"Назначен сотрудник: {emp.Name} (ID={emp.Id})",
-                Timestamp = DateTime.UtcNow
-            }, ct);
-
-            if (oldStatus != t.Status)
-            {
-                await _context.TicketHistories.AddAsync(new TicketHistory
-                {
-                    TicketId = t.Id,
-                    Action = "Статус",
-                    Details = $"{oldStatus} -> {t.Status}",
-                    Timestamp = DateTime.UtcNow
-                }, ct);
-            }
-
             await _context.SaveChangesAsync(ct);
             return true;
         }
@@ -265,7 +304,6 @@ namespace КР_Ханников.Services
             return true;
         }
 
-     
         public async Task<TicketComment> AddCommentAsync(
             int ticketId,
             int userId,
@@ -333,7 +371,7 @@ namespace КР_Ханников.Services
             {
                 TicketId = t.Id,
                 Action = "Закрытие",
-                Details = $"Тикет закрыт сотрудником #{resolvedByEmployeeId}",
+                Details = $"Тикет закрыт сотрудником #{resolvedByEmployeeId}. Решение зафиксировано.",
                 Timestamp = DateTime.UtcNow
             }, ct);
 
@@ -343,7 +381,7 @@ namespace КР_Ханников.Services
 
         private static string BuildUpdateDetails(string oldTitle, string newTitle, string oldDesc, string newDesc, DateTime? oldDue, DateTime? newDue)
         {
-            var parts = new System.Collections.Generic.List<string>();
+            var parts = new List<string>();
             if (!string.Equals(oldTitle, newTitle, StringComparison.Ordinal)) parts.Add($"Заголовок изменен");
             if (!string.Equals(oldDesc, newDesc, StringComparison.Ordinal)) parts.Add("Описание изменено");
             if (oldDue != newDue) parts.Add($"Срок: {FormatDate(oldDue)} -> {FormatDate(newDue)}");

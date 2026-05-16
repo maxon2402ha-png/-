@@ -1,18 +1,16 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using КР_Ханников.Core;
 using КР_Ханников.Data;
 
 namespace КР_Ханников.Services
 {
-    public class AuditService
+    [SupportedOSPlatform("windows")]
+    // IDE0290: Используем основной конструктор
+    public class AuditService(AuthService auth)
     {
-        private readonly AuthService _auth;
-
-        public AuditService(AuthService auth)
-        {
-            _auth = auth ?? throw new ArgumentNullException(nameof(auth));
-        }
+        private readonly AuthService _auth = auth ?? throw new ArgumentNullException(nameof(auth));
 
         public void Log(string action, string? details = null)
         {
@@ -20,14 +18,13 @@ namespace КР_Ханников.Services
             {
                 using var db = new AppDbContext();
 
-                // Если CurrentUser null, используем "anonymous"
                 var username = _auth.CurrentUser?.Username ?? "anonymous";
 
                 var entry = new AuditLog
                 {
                     Username = username,
                     Action = action,
-                    Details = details ?? string.Empty, // Защита от null при вставке в БД
+                    Details = details ?? string.Empty,
                     Timestamp = DateTime.UtcNow
                 };
 

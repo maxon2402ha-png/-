@@ -1,11 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualBasic;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using System.Windows;
@@ -15,6 +15,9 @@ using System.Windows.Threading;
 using КР_Ханников.Core;
 using КР_Ханников.Data;
 using КР_Ханников.Services;
+
+// Явно указываем, какой Constants использовать
+using Constants = КР_Ханников.Core.Constants;
 
 namespace КР_Ханников.Windows
 {
@@ -29,8 +32,8 @@ namespace КР_Ханников.Windows
 
         private Ticket _ticket = null!;
         private DispatcherTimer? _timer;
+        private bool _isInitializing = true;
 
-        // ViewModel для комментария
         public class CommentViewModel
         {
             public string AuthorName { get; set; } = string.Empty;
@@ -39,7 +42,7 @@ namespace КР_Ханников.Windows
             public DateTime CreatedAt { get; set; }
             public bool IsMe { get; set; }
             public bool IsInternal { get; set; }
-            public string Role { get; set; } = "Client"; // Добавлено поле Роль для цвета аватарки
+            public string Role { get; set; } = "Client";
         }
 
         public TicketDetailsWindow(int ticketId) : this(ticketId, new AppDbContext(), null!) { }
@@ -57,22 +60,38 @@ namespace КР_Ханников.Windows
             _notificationService = new NotificationService(_context, _authService);
             _ticketService = new TicketService(_context);
 
-            LoadTicket();
-            StartTimer();
+            SetupComboBoxes();
+            Loaded += Window_Loaded;
         }
 
-        private void LoadTicket()
+        private void SetupComboBoxes()
         {
+            // IDE0031: Убраны избыточные проверки на null
+            StatusCombo.ItemsSource = Ticket.AllStatuses;
+            PriorityCombo.ItemsSource = Enum.GetValues(typeof(TicketPriority));
+        }
+
+        private async void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            await LoadTicketDataAsync();
+        }
+
+        private async Task LoadTicketDataAsync()
+        {
+            _isInitializing = true;
             try
             {
                 _context.ChangeTracker.Clear();
 
-                var t = _context.Tickets
+                var t = await _context.Tickets
                     .Include(x => x.Client)
-                    .Include(x => x.Assignee).ThenInclude(a => a != null ? a.User : null)
+                    .Include(x => x.Assignee).ThenInclude(a => a.User)
                     .Include(x => x.Solution)
                     .Include(x => x.Feedback)
-                    .FirstOrDefault(x => x.Id == _ticketId);
+                    .Include(x => x.Comments).ThenInclude(c => c.Author)
+                    .Include(x => x.History)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.Id == _ticketId);
 
                 if (t == null)
                 {
@@ -80,45 +99,50 @@ namespace КР_Ханников.Windows
                     Close();
                     return;
                 }
+
                 _ticket = t;
 
-                if (TicketIdHeader != null) TicketIdHeader.Text = $"#{_ticket.Id}";
-                if (TicketTitleHeader != null) TicketTitleHeader.Text = _ticket.Title;
-                if (DescriptionText != null) DescriptionText.Text = _ticket.Description;
-                if (StatusText != null) StatusText.Text = _ticket.Status;
+                // IDE0031: Убраны избыточные проверки на null для UI элементов
+                TicketIdHeader.Text = $"#{_ticket.Id}";
+                TicketTitleHeader.Text = _ticket.Title;
+                DescriptionText.Text = string.IsNullOrWhiteSpace(_ticket.Description) ? "Нет описания" : _ticket.Description;
+                StatusText.Text = _ticket.Status;
+                StatusBadge.Background = GetStatusBrush(_ticket.Status);
 
-                if (StatusBadge != null)
-                    StatusBadge.Background = GetStatusBrush(_ticket.Status);
-
-                if (ClientNameText != null) ClientNameText.Text = _ticket.Client?.Name ?? "Неизвестно";
-                if (ClientEmailText != null) ClientEmailText.Text = _ticket.Client?.Email ?? "Нет email";
+                ClientNameText.Text = _ticket.Client?.Name ?? "Неизвестно";
+                ClientEmailText.Text = _ticket.Client?.Email ?? "Нет email";
 
                 var assigneeName = "Не назначен";
-                if (_ticket.Assignee != null)
-                    assigneeName = _ticket.Assignee.User?.Username ?? "Сотрудник"; // Можно заменить на Name из Employee если добавить поле
+                var currentAssignee = _ticket.Assignee;
+                if (currentAssignee != null)
+                {
+                    assigneeName = currentAssignee.User?.Username ?? "Сотрудник";
+                }
 
-                if (AssigneeText != null) AssigneeText.Text = assigneeName;
+                AssigneeText.Text = assigneeName;
+                CategoryText.Text = _ticket.Category.ToString();
+                PriorityText.Text = _ticket.Priority.ToString();
 
-                if (CategoryText != null) CategoryText.Text = _ticket.Category.ToString();
-                if (PriorityText != null) PriorityText.Text = _ticket.Priority.ToString();
-                if (DeadlineText != null)
-                    DeadlineText.Text = _ticket.DueAt.HasValue
-                        ? _ticket.DueAt.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
-                        : "Не задан";
+                StatusCombo.SelectedItem = _ticket.Status;
+                PriorityCombo.SelectedItem = _ticket.Priority;
 
-                DataContext = null;
                 DataContext = _ticket;
 
-                LoadComments();
-                LoadHistory();
+                UpdateSlaVisuals();
+                SetupWorkTimer();
                 CheckAttachment();
                 CheckSolution();
                 ConfigureAccessAndState();
-                UpdateTimerDisplay();
+                LoadComments();
+                LoadHistory();
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Ошибка загрузки тикета: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                _isInitializing = false;
             }
         }
 
@@ -131,50 +155,91 @@ namespace КР_Ханников.Windows
             bool isClosed = _ticket.Status == Constants.TicketStatus.Closed;
             bool isSupport = user.Role == Constants.UserRoles.Support || user.Role == Constants.UserRoles.Admin;
 
-            if (LinkExternalButton != null) LinkExternalButton.Visibility = isSupport ? Visibility.Visible : Visibility.Collapsed;
-            if (SyncExternalButton != null) SyncExternalButton.Visibility = isSupport ? Visibility.Visible : Visibility.Collapsed;
-
-            if (InternalCheck != null)
-            {
-                InternalCheck.Visibility = isSupport ? Visibility.Visible : Visibility.Collapsed;
-                InternalCheck.IsChecked = false;
-            }
+            // IDE0031: Убраны избыточные проверки на null
+            OperatorControlsPanel.Visibility = (isSupport && !isClosed) ? Visibility.Visible : Visibility.Collapsed;
+            InternalCheck.Visibility = isSupport ? Visibility.Visible : Visibility.Collapsed;
+            InternalCheck.IsChecked = false;
 
             if (isClient)
             {
-                if (CloseTicketButton != null) CloseTicketButton.Visibility = Visibility.Collapsed;
-                if (EditButton != null) EditButton.Visibility = Visibility.Collapsed;
+                CloseTicketButton.Visibility = Visibility.Collapsed;
+                EditButton.Visibility = Visibility.Collapsed;
 
-                if (RateButton != null)
+                if (isClosed)
                 {
-                    if (isClosed)
+                    RateButton.Visibility = Visibility.Visible;
+                    if (_ticket.Feedback != null)
                     {
-                        RateButton.Visibility = Visibility.Visible;
-                        if (_ticket.Feedback != null)
-                        {
-                            RateButton.Content = $"Оценка: {_ticket.Feedback.Rating}/5";
-                            RateButton.IsEnabled = false;
-                        }
-                        else
-                        {
-                            RateButton.Content = "⭐ Оценить работу";
-                            RateButton.IsEnabled = true;
-                        }
+                        RateButton.Content = $"Оценка: {_ticket.Feedback.Rating}/5";
+                        RateButton.IsEnabled = false;
                     }
                     else
                     {
-                        RateButton.Visibility = Visibility.Collapsed;
+                        RateButton.Content = "⭐ Оценить работу";
+                        RateButton.IsEnabled = true;
                     }
+                }
+                else
+                {
+                    RateButton.Visibility = Visibility.Collapsed;
                 }
             }
             else
             {
-                if (RateButton != null) RateButton.Visibility = Visibility.Collapsed;
-                if (CloseTicketButton != null)
-                {
-                    CloseTicketButton.IsEnabled = !isClosed;
-                    CloseTicketButton.Content = isClosed ? "Тикет закрыт" : "✓ Решить тикет";
-                }
+                RateButton.Visibility = Visibility.Collapsed;
+                CloseTicketButton.Visibility = isClosed ? Visibility.Collapsed : Visibility.Visible;
+            }
+        }
+
+        private void UpdateSlaVisuals()
+        {
+            // IDE0019: Сопоставление шаблонов для чистоты кода
+            if (FindName("SlaStatusText") is not TextBlock slaStatus ||
+                FindName("SlaProgressBar") is not ProgressBar slaProgress)
+                return;
+
+            if (_ticket.Status == Constants.TicketStatus.Closed || _ticket.Status == Constants.TicketStatus.Resolved)
+            {
+                slaStatus.Text = "Заявка решена";
+                slaStatus.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#10B981"));
+                slaProgress.Value = 100;
+                slaProgress.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#10B981"));
+                return;
+            }
+
+            if (!_ticket.DueAt.HasValue)
+            {
+                slaStatus.Text = "SLA не установлен";
+                slaStatus.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
+                slaProgress.Value = 0;
+                return;
+            }
+
+            var totalTime = _ticket.DueAt.Value - _ticket.CreatedAt;
+            var timeRemaining = _ticket.DueAt.Value - DateTime.UtcNow;
+            var timePassed = DateTime.UtcNow - _ticket.CreatedAt;
+
+            if (timeRemaining.TotalSeconds <= 0)
+            {
+                slaStatus.Text = "ПРОСРОЧЕНО";
+                slaStatus.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DC2626"));
+                slaProgress.Value = 100;
+                slaProgress.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DC2626"));
+            }
+            else
+            {
+                string remainingText = timeRemaining.TotalHours >= 24
+                    ? $"{(int)timeRemaining.TotalDays} дн. {timeRemaining.Hours} ч."
+                    : $"{(int)timeRemaining.TotalHours} ч. {timeRemaining.Minutes} мин.";
+
+                slaStatus.Text = remainingText;
+                slaStatus.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#111827"));
+
+                double percent = (timePassed.TotalSeconds / totalTime.TotalSeconds) * 100;
+                slaProgress.Value = Math.Min(percent, 100);
+
+                if (percent > 80) slaProgress.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F59E0B"));
+                else slaProgress.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3B82F6"));
             }
         }
 
@@ -183,57 +248,48 @@ namespace КР_Ханников.Windows
             try
             {
                 var currentUserId = _authService.CurrentUser?.Id ?? 0;
-
-                var query = _context.TicketComments
-                    .Include(c => c.Author)
-                    .Where(c => c.TicketId == _ticketId);
+                var commentsQuery = _ticket.Comments.AsEnumerable();
 
                 if (_authService.CurrentUser?.Role == Constants.UserRoles.Client)
                 {
-                    query = query.Where(c => !c.IsInternal);
+                    commentsQuery = commentsQuery.Where(c => !c.IsInternal);
                 }
 
-                var rawComments = query.OrderBy(c => c.CreatedAt).ToList();
-
-                // Сбор ID для подгрузки имен
+                var rawComments = commentsQuery.OrderBy(c => c.CreatedAt).ToList();
                 var authorIds = rawComments.Select(c => c.UserId).Distinct().ToList();
 
-                var clients = _context.Clients.Where(c => authorIds.Contains(c.UserId))
-                    .ToDictionary(c => c.UserId, c => c.Name);
-
-                // Загружаем имена сотрудников (здесь используем Username, так как в Employee пока нет Name, но можно расширить)
-                var employees = _context.Employees.Include(e => e.User)
-                    .Where(e => authorIds.Contains(e.UserId))
-                    .ToList();
-
+                var clients = _context.Clients.Where(c => authorIds.Contains(c.UserId)).ToDictionary(c => c.UserId, c => c.Name);
+                var employees = _context.Employees.Include(e => e.User).Where(e => authorIds.Contains(e.UserId)).ToList();
                 var employeeNames = new Dictionary<int, string>();
-                foreach (var emp in employees)
-                    employeeNames[emp.UserId] = emp.User?.Username ?? "Сотрудник";
+                foreach (var emp in employees) employeeNames[emp.UserId] = emp.User?.Username ?? "Сотрудник";
 
                 var viewModels = rawComments.Select(c =>
                 {
-                    string displayName = c.Author.Username;
+                    string displayName = c.Author?.Username ?? "Система";
 
-                    if (clients.ContainsKey(c.UserId))
-                        displayName = clients[c.UserId];
-                    else if (employeeNames.ContainsKey(c.UserId))
-                        displayName = employeeNames[c.UserId];
+                    // CA1854: Использование TryGetValue
+                    if (clients.TryGetValue(c.UserId, out var clientName))
+                        displayName = clientName;
+                    else if (employeeNames.TryGetValue(c.UserId, out var empName))
+                        displayName = empName;
 
                     return new CommentViewModel
                     {
                         AuthorName = displayName,
-                        AvatarPath = c.Author.AvatarPath,
+                        AvatarPath = c.Author?.AvatarPath,
                         Text = c.Text,
                         CreatedAt = c.CreatedAt.ToLocalTime(),
                         IsMe = c.UserId == currentUserId,
                         IsInternal = c.IsInternal,
-                        Role = c.Author.Role // Передаем роль для раскраски
+                        Role = c.Author?.Role ?? "Client"
                     };
                 }).ToList();
 
-                if (CommentsList != null) CommentsList.ItemsSource = viewModels;
-                if (CommentsScrollViewer != null) CommentsScrollViewer.ScrollToBottom();
-                if (CommentsCountText != null) CommentsCountText.Text = viewModels.Count.ToString();
+                // IDE0031: Убраны избыточные проверки на null
+                CommentsList.ItemsSource = viewModels;
+                CommentsCountText.Text = viewModels.Count.ToString();
+
+                Dispatcher.InvokeAsync(() => CommentsScrollViewer?.ScrollToBottom(), DispatcherPriority.Background);
             }
             catch (Exception ex)
             {
@@ -243,15 +299,10 @@ namespace КР_Ханников.Windows
 
         private void LoadHistory()
         {
-            if (HistoryGrid != null)
-                HistoryGrid.ItemsSource = _context.TicketHistories
-                    .AsNoTracking()
-                    .Where(h => h.TicketId == _ticketId)
-                    .OrderByDescending(h => h.Timestamp)
-                    .ToList();
+            HistoryGrid.ItemsSource = _ticket.History.OrderByDescending(h => h.Timestamp).ToList();
         }
 
-        private void SendComment_Click(object sender, RoutedEventArgs e)
+        private async void SendComment_Click(object sender, RoutedEventArgs e)
         {
             var text = CommentBox.Text?.Trim();
             if (string.IsNullOrWhiteSpace(text)) return;
@@ -262,57 +313,124 @@ namespace КР_Ханников.Windows
                 var user = _authService.CurrentUser;
                 bool isInternal = false;
 
-                if (user.Role != Constants.UserRoles.Client && InternalCheck != null)
+                // IDE0031
+                if (user.Role != Constants.UserRoles.Client)
+                {
                     isInternal = InternalCheck.IsChecked == true;
+                }
 
-                var c = new TicketComment
-                {
-                    TicketId = _ticketId,
-                    UserId = user.Id,
-                    Text = text,
-                    IsInternal = isInternal,
-                    CreatedAt = DateTime.UtcNow
-                };
-                _context.TicketComments.Add(c);
+                using var isolatedDb = App.CreateDbContext();
+                var isolatedTicketService = new TicketService(isolatedDb);
 
-                string authorName = user.Username;
-                var client = _context.Clients.FirstOrDefault(cl => cl.UserId == user.Id);
-                if (client != null) authorName = client.Name;
-
-                string details = isInternal
-                    ? $"[Внутренний] {authorName}: {text.Substring(0, Math.Min(text.Length, 30))}..."
-                    : $"{authorName}: {text.Substring(0, Math.Min(text.Length, 30))}...";
-
-                _context.TicketHistories.Add(new TicketHistory
-                {
-                    TicketId = _ticketId,
-                    Action = "Комментарий",
-                    Details = details,
-                    Timestamp = DateTime.UtcNow
-                });
-
-                _context.SaveChanges();
+                await isolatedTicketService.AddCommentAsync(_ticketId, user.Id, text, isInternal);
 
                 if (user.Role == Constants.UserRoles.Client && _ticket.AssigneeEmployeeId.HasValue)
                 {
-                    var emp = _context.Employees.Find(_ticket.AssigneeEmployeeId.Value);
+                    var emp = await isolatedDb.Employees.FindAsync(_ticket.AssigneeEmployeeId.Value);
                     if (emp != null) _notificationService.NotifyOperatorsAboutNewTicket(_ticket);
                 }
 
                 CommentBox.Clear();
-                if (InternalCheck != null) InternalCheck.IsChecked = false;
-                LoadComments();
-                LoadHistory();
+                InternalCheck.IsChecked = false;
+
+                await LoadTicketDataAsync();
             }
-            catch (Exception ex) { MessageBox.Show($"Ошибка: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
-        private void CloseTicket_Click(object sender, RoutedEventArgs e)
+        private async void StatusCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            var resWin = new ResolutionWindow(_ticketId, _ticket.Title) { Owner = this };
-            if (resWin.ShowDialog() == true)
+            if (_isInitializing || StatusCombo.SelectedItem == null) return;
+
+            var newStatus = StatusCombo.SelectedItem.ToString();
+
+            try
             {
-                var t = _context.Tickets.Find(_ticketId);
+                using var db = App.CreateDbContext();
+                var ticketService = new TicketService(db);
+                await ticketService.ChangeStatusAsync(_ticketId, newStatus!);
+                await LoadTicketDataAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при смене статуса: {ex.Message}");
+            }
+        }
+
+        private async void PriorityCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isInitializing || PriorityCombo.SelectedItem == null) return;
+
+            var newPriority = (TicketPriority)PriorityCombo.SelectedItem;
+
+            try
+            {
+                using var db = App.CreateDbContext();
+                var ticket = await db.Tickets.FindAsync(_ticketId);
+
+                if (ticket != null && ticket.Priority != newPriority)
+                {
+                    ticket.Priority = newPriority;
+
+                    db.TicketHistories.Add(new TicketHistory
+                    {
+                        TicketId = _ticketId,
+                        Action = "Изменение приоритета",
+                        Details = $"Приоритет изменен на {newPriority}",
+                        Timestamp = DateTime.UtcNow
+                    });
+
+                    await db.SaveChangesAsync();
+                    await LoadTicketDataAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при смене приоритета: {ex.Message}");
+            }
+        }
+
+        private void SetupWorkTimer()
+        {
+            _timer?.Stop();
+
+            if (_ticket.Status != Constants.TicketStatus.InProgress && _ticket.Status != Constants.TicketStatus.Open)
+            {
+                TimerText.Text = "Остановлен";
+                TimerText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280"));
+                TimerBorder.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F3F4F6"));
+                return;
+            }
+
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _timer.Tick += (s, e) =>
+            {
+                var elapsed = DateTime.UtcNow - _ticket.CreatedAt.ToUniversalTime();
+                TimerText.Text = $"{(int)elapsed.TotalHours:00}:{elapsed.Minutes:00}:{elapsed.Seconds:00}";
+            };
+
+            TimerText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1D4ED8"));
+            TimerBorder.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DBEAFE"));
+            _timer.Start();
+        }
+
+        private async void CloseTicket_Click(object sender, RoutedEventArgs e)
+        {
+            string resolutionText = Interaction.InputBox(
+                "Введите финальное решение по заявке для клиента:",
+                "Решение заявки",
+                "Вопрос решен штатным образом.");
+
+            if (string.IsNullOrWhiteSpace(resolutionText))
+                return;
+
+            try
+            {
+                using var db = App.CreateDbContext();
+                var t = await db.Tickets.FindAsync(_ticketId);
                 if (t != null)
                 {
                     var oldStatus = t.Status;
@@ -322,12 +440,12 @@ namespace КР_Ханников.Windows
                     var sol = new Solution
                     {
                         TicketId = _ticketId,
-                        ResolutionText = resWin.ResolutionText,
+                        ResolutionText = resolutionText,
                         ResolutionDate = DateTime.UtcNow
                     };
-                    _context.Solutions.Add(sol);
+                    db.Solutions.Add(sol);
 
-                    _context.TicketHistories.Add(new TicketHistory
+                    db.TicketHistories.Add(new TicketHistory
                     {
                         TicketId = _ticketId,
                         Action = "Закрытие",
@@ -335,122 +453,87 @@ namespace КР_Ханников.Windows
                         Timestamp = DateTime.UtcNow
                     });
 
-                    _context.SaveChanges();
+                    await db.SaveChangesAsync();
                     _notificationService.NotifyStatusChanged(t, oldStatus, Constants.TicketStatus.Closed);
 
-                    LoadTicket();
+                    await LoadTicketDataAsync();
                     MessageBox.Show("Тикет успешно решён", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                     DialogResult = true;
                 }
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при закрытии: {ex.Message}");
+            }
         }
 
-        private void Edit_Click(object sender, RoutedEventArgs e)
+        private async void Edit_Click(object sender, RoutedEventArgs e)
         {
             var editWin = new EditTicketWindow(_ticketId, _context) { Owner = this };
             if (editWin.ShowDialog() == true)
-                LoadTicket();
+            {
+                await LoadTicketDataAsync();
+            }
         }
 
-        private void Rate_Click(object sender, RoutedEventArgs e)
+        private async void Rate_Click(object sender, RoutedEventArgs e)
         {
-            var feedbackWindow = new FeedbackWindow() { Owner = this };
-            if (feedbackWindow.ShowDialog() == true)
+            string ratingStr = Interaction.InputBox("Оцените качество работы специалиста (от 1 до 5):", "Оценка качества", "5");
+
+            if (string.IsNullOrWhiteSpace(ratingStr))
+                return;
+
+            if (!int.TryParse(ratingStr, out int rating) || rating < 1 || rating > 5)
             {
-                try
+                MessageBox.Show("Оценка должна быть числом от 1 до 5.", "Ошибка ввода", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            string comment = Interaction.InputBox("Ваш комментарий (по желанию):", "Отзыв", "");
+
+            try
+            {
+                using var db = App.CreateDbContext();
+                var feedback = new Feedback
                 {
-                    int rating = feedbackWindow.Rating;
-                    string comment = feedbackWindow.FeedbackText;
+                    TicketId = _ticketId,
+                    ClientId = _ticket.ClientId,
+                    SupportId = _ticket.AssigneeEmployeeId,
+                    Rating = rating,
+                    Comment = comment,
+                    CreatedAt = DateTime.UtcNow
+                };
 
-                    var feedback = new Feedback
-                    {
-                        TicketId = _ticketId,
-                        ClientId = _ticket.ClientId,
-                        SupportId = _ticket.AssigneeEmployeeId,
-                        Rating = rating,
-                        Comment = comment,
-                        CreatedAt = DateTime.UtcNow
-                    };
+                db.Feedbacks.Add(feedback);
+                await db.SaveChangesAsync();
 
-                    _context.Feedbacks.Add(feedback);
-                    _context.SaveChanges();
-
-                    MessageBox.Show("Спасибо за ваш отзыв!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
-                    LoadTicket();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Ошибка сохранения: {ex.Message}");
-                }
+                MessageBox.Show("Спасибо за ваш отзыв!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                await LoadTicketDataAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка сохранения: {ex.Message}");
             }
         }
 
         private void CheckAttachment()
         {
-            if (AttachmentPanel == null) return;
             bool hasFile = !string.IsNullOrEmpty(_ticket.AttachmentPath);
             AttachmentPanel.Visibility = hasFile ? Visibility.Visible : Visibility.Collapsed;
-            if (hasFile && FileNameText != null) FileNameText.Text = _ticket.AttachmentFileName;
+            if (hasFile)
+            {
+                FileNameText.Text = _ticket.AttachmentFileName ?? "Файл";
+                AttachmentPanel.Tag = _ticket.AttachmentPath;
+            }
         }
 
         private void CheckSolution()
         {
-            if (SolutionPanel == null) return;
             bool hasSol = _ticket.Solution != null;
             SolutionPanel.Visibility = hasSol ? Visibility.Visible : Visibility.Collapsed;
-            if (hasSol && SolutionText != null) SolutionText.Text = _ticket.Solution!.ResolutionText;
-        }
-
-        private void StartTimer()
-        {
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            _timer.Tick += (s, e) => UpdateTimerDisplay();
-            _timer.Start();
-        }
-
-        private void UpdateTimerDisplay()
-        {
-            if (_ticket == null || TimerText == null || TimerBorder == null) return;
-
-            if (_ticket.Status == Constants.TicketStatus.Closed)
+            if (hasSol)
             {
-                TimerBorder.Visibility = Visibility.Collapsed;
-                return;
-            }
-
-            TimerBorder.Visibility = Visibility.Visible;
-
-            if (_ticket.DueAt.HasValue)
-            {
-                var timeLeft = _ticket.DueAt.Value - DateTime.UtcNow;
-
-                if (timeLeft.TotalSeconds < 0)
-                {
-                    TimerText.Text = $"Просрочено: {timeLeft.Duration():dd\\.hh\\:mm\\:ss}";
-                    TimerBorder.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FEE2E2"));
-                    TimerText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DC2626"));
-                }
-                else
-                {
-                    TimerText.Text = $"Осталось: {timeLeft:dd\\.hh\\:mm\\:ss}";
-                    if (timeLeft.TotalHours < 4)
-                    {
-                        TimerBorder.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFEDD5"));
-                        TimerText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#C2410C"));
-                    }
-                    else
-                    {
-                        TimerBorder.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#D1FAE5"));
-                        TimerText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#059669"));
-                    }
-                }
-            }
-            else
-            {
-                var elapsed = DateTime.UtcNow - _ticket.CreatedAt;
-                TimerText.Text = $"В работе: {elapsed:dd\\.hh\\:mm\\:ss}";
-                TimerBorder.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F3F4F6"));
-                TimerText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#4B5563"));
+                SolutionText.Text = _ticket.Solution!.ResolutionText;
             }
         }
 
@@ -458,53 +541,25 @@ namespace КР_Ханников.Windows
         {
             try
             {
-                if (!string.IsNullOrEmpty(_ticket.AttachmentPath) && System.IO.File.Exists(_ticket.AttachmentPath))
+                if (AttachmentPanel.Tag is string filePath && System.IO.File.Exists(filePath))
                 {
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = _ticket.AttachmentPath, UseShellExecute = true });
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = filePath, UseShellExecute = true });
                 }
-            }
-            catch { }
-        }
-
-        private void LinkExternal_Click(object sender, RoutedEventArgs e)
-        {
-            new LinkExternalDialog(_ticketId, _ticket.Title) { Owner = this }.ShowDialog();
-        }
-
-        private async void SyncExternal_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                var link = await _context.ExternalLinks.FirstOrDefaultAsync(l => l.TicketId == _ticketId);
-                if (link == null)
-                {
-                    MessageBox.Show("Нет связи с внешней системой.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
-                    return;
-                }
-
-                if (sender is Button btn) btn.IsEnabled = false;
-
-                using var httpClient = new HttpClient();
-                var integration = new IntegrationService(_context,
-                    new JiraClient(httpClient), new TrelloClient(httpClient), new BugzillaClient(), new MantisClient());
-
-                await integration.SyncIfChangedAsync(_ticketId, link.System, System.Threading.CancellationToken.None);
-                LoadTicket();
-                MessageBox.Show($"Синхронизация с {link.System} выполнена.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            finally
-            {
-                if (sender is Button btn) btn.IsEnabled = true;
+                MessageBox.Show($"Не удалось открыть файл: {ex.Message}", "Ошибка");
             }
         }
 
-        private void CloseWindow_Click(object sender, RoutedEventArgs e) => Close();
+        private void CloseWindow_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = true;
+            Close();
+        }
 
-        private SolidColorBrush GetStatusBrush(string status)
+        // CA1822: Сделали метод статическим
+        private static SolidColorBrush GetStatusBrush(string status)
         {
             return status switch
             {

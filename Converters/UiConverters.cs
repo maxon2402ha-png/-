@@ -19,7 +19,7 @@ namespace КР_Ханников.Converters
     {
         public static StatusToColorConverter Instance { get; } = new();
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             var status = value as string ?? string.Empty;
 
@@ -33,7 +33,7 @@ namespace КР_Ханников.Converters
             };
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
             => Binding.DoNothing;
     }
 
@@ -42,7 +42,7 @@ namespace КР_Ханников.Converters
     {
         public static RoleToColorConverter Instance { get; } = new();
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             var role = value as string ?? string.Empty;
 
@@ -55,7 +55,7 @@ namespace КР_Ханников.Converters
             };
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
             => Binding.DoNothing;
     }
 
@@ -69,7 +69,7 @@ namespace КР_Ханников.Converters
         public static NullToVisibilityConverter Instance { get; } = new();
         public bool Invert { get; set; } = false;
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             bool isNull = value is null;
             if (value is string s) isNull = string.IsNullOrWhiteSpace(s);
@@ -77,25 +77,24 @@ namespace КР_Ханников.Converters
             return isNull ? Visibility.Collapsed : Visibility.Visible;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
             => Binding.DoNothing;
     }
 
     [ValueConversion(typeof(bool), typeof(Visibility))]
     public class BoolToVisibilityConverter : IValueConverter
     {
-        // Добавлено поле Instance для исправления ошибки MC3011
         public static BoolToVisibilityConverter Instance { get; } = new();
         public bool Invert { get; set; } = false;
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             var flag = (value as bool?) ?? false;
             if (Invert) flag = !flag;
             return flag ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
             => Binding.DoNothing;
     }
 
@@ -107,7 +106,7 @@ namespace КР_Ханников.Converters
         public double FalseOpacity { get; set; } = 0.4;
         public bool Invert { get; set; } = false;
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             var flag = (value as bool?) ?? false;
             if (Invert) flag = !flag;
@@ -125,7 +124,7 @@ namespace КР_Ханников.Converters
             return flag ? t : f;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
             => Binding.DoNothing;
     }
 
@@ -134,13 +133,13 @@ namespace КР_Ханников.Converters
     {
         public static InverseBoolConverter Instance { get; } = new();
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             var flag = (value as bool?) ?? false;
             return !flag;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
             => Convert(value, targetType, parameter, culture);
     }
 
@@ -150,7 +149,7 @@ namespace КР_Ханников.Converters
         public static RoleToVisibilityConverter Instance { get; } = new();
         public bool Invert { get; set; } = false;
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             var role = value as string ?? string.Empty;
             var param = parameter as string ?? string.Empty;
@@ -169,7 +168,7 @@ namespace КР_Ханников.Converters
             return isAllowed ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
             => Binding.DoNothing;
     }
 
@@ -178,7 +177,7 @@ namespace КР_Ханников.Converters
     {
         public static PathToImageConverter Instance { get; } = new();
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             var path = value as string;
 
@@ -203,7 +202,37 @@ namespace КР_Ханников.Converters
             }
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
             => Binding.DoNothing;
+    }
+
+    // =========================================================
+    // Математические конвертеры для KPI и SLA
+    // =========================================================
+
+    public class LessThanConverter : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (value != null && parameter != null)
+                return System.Convert.ToDouble(value) < System.Convert.ToDouble(parameter);
+            return false;
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+            => throw new NotSupportedException();
+    }
+
+    public class GreaterThanConverter : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (value != null && parameter != null)
+                return System.Convert.ToDouble(value) > System.Convert.ToDouble(parameter);
+            return false;
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+            => throw new NotSupportedException();
     }
 }

@@ -144,7 +144,7 @@ namespace КР_Ханников.Windows
         private void UpdateSidebar(Button? activeButton)
         {
             var buttons = new[] {
-                OpenDashboardButton, MyTicketsButton, AllTicketsButton,
+                OpenDashboardButton, OpenAnalyticsButton, MyTicketsButton, AllTicketsButton,
                 ClientHistoryButton, ClosedTicketsButton, EmployeesButton,
                 IntegrationButton, AuditButton, OpenKnowledgeBaseButton
             };
@@ -171,6 +171,15 @@ namespace КР_Ханников.Windows
         // --- Обработчики меню (навигация) ---
         private void OpenDashboard_Click(object sender, RoutedEventArgs e)
             => SwitchPage(OpenDashboardButton, new DashboardControl(_authService));
+
+        // Окно аналитики KPI и нагрузки. В отличие от Дашборда это полноценное
+        // Window, а не UserControl, поэтому открывается модально через ShowDialog,
+        // а не через SwitchPage.
+        private void OpenAnalytics_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new AnalyticsWindow { Owner = this };
+            window.ShowDialog();
+        }
 
         private void OpenKnowledgeBase_Click(object sender, RoutedEventArgs e)
             => SwitchPage(OpenKnowledgeBaseButton, new KnowledgeBaseControl(_context, _authService));

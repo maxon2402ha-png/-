@@ -1,55 +1,110 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
+using System.Linq;
+using System.Runtime.Versioning;
 using System.Windows;
 using System.Windows.Controls;
-using System.Runtime.Versioning; // Добавлено
+using System.Windows.Media;
+using КР_Ханников.Core;
 using КР_Ханников.Data;
-using КР_Ханников.Services;
 
 namespace КР_Ханников.Windows
 {
-    [SupportedOSPlatform("windows")] // Исправление CA1416
+    [SupportedOSPlatform("windows")]
     public partial class AddEmployeeWindow : Window
     {
         public AddEmployeeWindow()
         {
             InitializeComponent();
-            RoleBox.SelectedIndex = 0;
+            NameBox.Focus();
         }
 
-        private void Save_Click(object sender, RoutedEventArgs e)
+        private void UsernameBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            var name = NameBox.Text?.Trim();
-            var username = UsernameBox.Text?.Trim();
-            var password = PasswordBox.Password;
-            var role = (RoleBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
-
-            if (string.IsNullOrWhiteSpace(name) ||
-                string.IsNullOrWhiteSpace(username) ||
-                string.IsNullOrWhiteSpace(password) ||
-                string.IsNullOrWhiteSpace(role))
+            // Убираем пробелы при вводе логина
+            if (UsernameBox.Text.Contains(" "))
             {
-                MessageBox.Show("Все поля обязательны!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
+                int caretIndex = UsernameBox.CaretIndex;
+                UsernameBox.Text = UsernameBox.Text.Replace(" ", "");
+                UsernameBox.CaretIndex = caretIndex > 0 ? caretIndex - 1 : 0;
+            }
+        }
+
+        private async void Save_Click(object sender, RoutedEventArgs e)
+        {
+            var name = NameBox.Text.Trim();
+            var username = UsernameBox.Text.Trim();
+            var password = PasswordBox.Password;
+            // ИСПРАВЛЕНИЕ: Используем RoleBox, как указано в XAML
+            var role = (RoleBox.SelectedItem as ComboBoxItem)?.Content.ToString() ?? Constants.UserRoles.Support;
+
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+            {
+                MessageBox.Show("Пожалуйста, заполните все обязательные поля (Имя, Логин, Пароль).", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (password.Length < 6)
+            {
+                MessageBox.Show("В целях безопасности пароль должен содержать не менее 6 символов.", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             try
             {
-                using (var context = App.CreateDbContext())
-                {
-                    var authService = new AuthService(context);
-                    bool success = authService.RegisterEmployee(name, username, password, role);
+                using var db = App.CreateDbContext();
 
-                    if (success)
-                    {
-                        MessageBox.Show("Сотрудник успешно добавлен!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
-                        DialogResult = true;
-                        Close();
-                    }
+                // Проверяем, свободен ли логин (игнорируя регистр)
+                if (await db.Users.AnyAsync(u => u.Username.ToLower() == username.ToLower()))
+                {
+                    MessageBox.Show("Пользователь с таким логином уже существует в системе! Пожалуйста, придумайте другой логин.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    UsernameBox.Focus();
+                    return;
                 }
+
+                // 1. Создаем учетную запись
+                var user = new User
+                {
+                    Username = username,
+                    PasswordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(password, 13),
+                    Role = role,
+                    IsEmailVerified = true, // Сотрудникам почту подтверждать не нужно (внутренняя регистрация)
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                db.Users.Add(user);
+                await db.SaveChangesAsync(); // Сохраняем, чтобы БД сгенерировала ID пользователя
+
+                // 2. Создаем профиль сотрудника
+                var employee = new Employee
+                {
+                    UserId = user.Id,
+                    Name = name,
+                    Role = role,
+                    MaxActiveTickets = 5 // Дефолтный лимит нагрузки для авто-назначения
+                };
+
+                db.Employees.Add(employee);
+
+                // 3. Пишем в аудит безопасности
+                db.AuditLogs.Add(new AuditLog
+                {
+                    Username = "System",
+                    Action = "Создание сотрудника",
+                    Details = $"Создан новый оператор '{name}' с логином '{username}' ({role})",
+                    Timestamp = DateTime.UtcNow
+                });
+
+                await db.SaveChangesAsync();
+
+                MessageBox.Show($"Сотрудник {name} успешно добавлен в систему и может приступить к работе!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                DialogResult = true;
+                Close();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при сохранении:\n{ex.Message}", "Критическая ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Ошибка при сохранении в базу данных:\n{ex.Message}", "Критическая ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -57,16 +112,6 @@ namespace КР_Ханников.Windows
         {
             DialogResult = false;
             Close();
-        }
-
-        private void UsernameBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            var textBox = (TextBox)sender;
-            if (textBox.Text.Length > 20)
-            {
-                textBox.Text = textBox.Text.Substring(0, 20);
-                textBox.CaretIndex = 20;
-            }
         }
     }
 }

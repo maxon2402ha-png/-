@@ -10,18 +10,13 @@ using КР_Ханников.Data;
 namespace КР_Ханников.Services
 {
     [SupportedOSPlatform("windows")]
-    public class AuthService
+    // IDE0290: Используем современный первичный конструктор (Primary Constructor)
+    public class AuthService(AppDbContext context)
     {
-        private readonly AppDbContext _context;
+        private readonly AppDbContext _context = context ?? throw new ArgumentNullException(nameof(context));
 
         // Текущий авторизованный пользователь
         public User? CurrentUser { get; private set; }
-
-        public AuthService(AppDbContext context)
-        {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-            Debug.WriteLine("[AuthService] Сервис авторизации инициализирован");
-        }
 
         // --- ВХОД В СИСТЕМУ ---
         public bool Login(string username, string password)
@@ -31,11 +26,13 @@ namespace КР_Ханников.Services
                 username = (username ?? string.Empty).Trim();
                 password = (password ?? string.Empty).Trim();
 
+#pragma warning disable CA1862 // Отключаем CA1862: EF Core требует ToLower для трансляции в SQL
 #if DEBUG
                 // В режиме отладки разрешаем вход под логином admin и паролем admin123
                 if (string.Equals(username, "admin", StringComparison.OrdinalIgnoreCase) &&
                     password == "admin123")
                 {
+                    // Возвращаем ToLower(), чтобы SQL смог это обработать
                     var debugAdmin = _context.Users.AsNoTracking()
                         .FirstOrDefault(u => u.Username.ToLower() == "admin");
 
@@ -56,8 +53,11 @@ namespace КР_Ханников.Services
                 }
 
                 var normalizedUsername = username.ToLower();
+
+                // Возвращаем ToLower(), чтобы SQL смог это обработать
                 var user = _context.Users.AsNoTracking()
                     .FirstOrDefault(u => u.Username.ToLower() == normalizedUsername);
+#pragma warning restore CA1862
 
                 if (user == null)
                 {
@@ -103,7 +103,8 @@ namespace КР_Ханников.Services
 
         // --- РЕГИСТРАЦИЯ ---
 
-        private string GenerateVerificationCode()
+        // CA1822: Метод сделан статическим, так как не использует this
+        private static string GenerateVerificationCode()
         {
             var random = new Random();
             return random.Next(100000, 999999).ToString();
@@ -126,11 +127,13 @@ namespace КР_Ханников.Services
                 ValidateCredentials(username, password);
                 var normalizedUsername = username.Trim().ToLower();
 
+#pragma warning disable CA1862 // Отключаем CA1862: EF Core требует ToLower для трансляции в SQL
                 if (_context.Users.Any(u => u.Username.ToLower() == normalizedUsername))
                 {
                     MessageBox.Show("Пользователь с таким логином уже существует!");
                     return null;
                 }
+#pragma warning restore CA1862
 
                 var code = GenerateVerificationCode();
 
@@ -197,11 +200,13 @@ namespace КР_Ханников.Services
 
                 var normalizedUsername = username.Trim().ToLower();
 
+#pragma warning disable CA1862 // Отключаем CA1862: EF Core требует ToLower для трансляции в SQL
                 if (_context.Users.Any(u => u.Username.ToLower() == normalizedUsername))
                 {
                     MessageBox.Show("Пользователь с таким логином уже существует!");
                     return false;
                 }
+#pragma warning restore CA1862
 
                 var user = new User
                 {
@@ -248,11 +253,13 @@ namespace КР_Ханников.Services
 
                 if (!string.Equals(CurrentUser.Username, newUsername, StringComparison.OrdinalIgnoreCase))
                 {
+#pragma warning disable CA1862 // Отключаем CA1862: EF Core требует ToLower для трансляции в SQL
                     if (_context.Users.Any(u => u.Username.ToLower() == newUsername.ToLower()))
                     {
                         MessageBox.Show("Этот логин уже занят.");
                         return false;
                     }
+#pragma warning restore CA1862
                 }
 
                 var userInDb = _context.Users.Find(CurrentUser.Id);
@@ -312,23 +319,28 @@ namespace КР_Ханников.Services
 
         // --- ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ---
 
-        private void LogSecurityEvent(string username, string action, string details)
+        // CA1822: Метод сделан статическим, так как не использует this
+        private static void LogSecurityEvent(string username, string action, string details)
         {
             try
             {
-                _context.AuditLogs.Add(new AuditLog
+                using var db = App.CreateDbContext();
+
+                db.AuditLogs.Add(new AuditLog
                 {
                     Username = username,
                     Action = action,
                     Details = details,
                     Timestamp = DateTime.UtcNow
                 });
-                _context.SaveChanges();
+
+                db.SaveChanges();
             }
             catch (Exception ex) { Debug.WriteLine($"Audit Fail: {ex.Message}"); }
         }
 
-        private void ValidateCredentials(string username, string password)
+        // CA1822: Метод сделан статическим, так как не использует this
+        private static void ValidateCredentials(string username, string password)
         {
             if (string.IsNullOrWhiteSpace(username))
                 throw new ArgumentException("Логин не может быть пустым");
@@ -343,7 +355,8 @@ namespace КР_Ханников.Services
                 throw new ArgumentException($"Пароль должен содержать минимум {Constants.Validation.MinPasswordLength} символов");
         }
 
-        private void ValidateEmployeeData(string name, string role)
+        // CA1822: Метод сделан статическим, так как не использует this
+        private static void ValidateEmployeeData(string name, string role)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Имя сотрудника не может быть пустым");

@@ -1,111 +1,187 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Versioning;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Runtime.Versioning; // Добавлено
+using System.Windows.Threading;
+using КР_Ханников.Core;
 using КР_Ханников.Data;
 using КР_Ханников.Services;
 
 namespace КР_Ханников.Windows
 {
-    [SupportedOSPlatform("windows")] // Исправлено: CA1416
+    [SupportedOSPlatform("windows")]
     public partial class AuditLogControl : UserControl
     {
-        private readonly AppDbContext _context;
-        private readonly AuthService _auth;
+        private readonly AuthService _authService;
+        private readonly DispatcherTimer _searchTimer;
 
-        public AuditLogControl(AppDbContext context, AuthService auth)
+        public AuditLogControl(AppDbContext context, AuthService authService)
         {
             InitializeComponent();
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-            _auth = auth ?? throw new ArgumentNullException(nameof(auth));
+            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
 
-            if (_auth.CurrentUser?.Role != Core.Constants.UserRoles.Admin)
-            {
-                MessageBox.Show("Доступ запрещен.", "Безопасность", MessageBoxButton.OK, MessageBoxImage.Warning);
-                this.Visibility = Visibility.Collapsed;
-                return;
-            }
-
+            // Устанавливаем период по умолчанию (последние 7 дней)
             FromPicker.SelectedDate = DateTime.Now.AddDays(-7);
             ToPicker.SelectedDate = DateTime.Now;
 
-            LoadData();
+            // Настраиваем таймер для отложенного поиска (Debounce)
+            _searchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+            _searchTimer.Tick += async (s, e) =>
+            {
+                _searchTimer.Stop();
+                await LoadLogsAsync();
+            };
+
+            Loaded += async (s, e) => await LoadLogsAsync();
         }
 
-        private void LoadData()
+        private async Task LoadLogsAsync()
         {
             try
             {
-                var query = _context.AuditLogs.AsNoTracking().AsQueryable();
+                using var db = App.CreateDbContext();
 
-                if (FromPicker.SelectedDate.HasValue)
-                    query = query.Where(x => x.Timestamp >= FromPicker.SelectedDate.Value.ToUniversalTime());
+                // Используем IQueryable, чтобы фильтровать данные прямо в SQL, а не в оперативной памяти
+                var query = db.AuditLogs.AsNoTracking().AsQueryable();
 
-                if (ToPicker.SelectedDate.HasValue)
-                    query = query.Where(x => x.Timestamp <= ToPicker.SelectedDate.Value.AddDays(1).ToUniversalTime());
-
-                var text = SearchBox.Text?.Trim().ToLower();
-                if (!string.IsNullOrWhiteSpace(text))
+                // 1. Фильтр по строке поиска
+                var search = SearchBox.Text?.Trim().ToLower();
+                if (!string.IsNullOrEmpty(search))
                 {
-                    query = query.Where(x => x.Username.ToLower().Contains(text) ||
-                                             x.Action.ToLower().Contains(text) ||
-                                             x.Details.ToLower().Contains(text));
+                    query = query.Where(l =>
+                        (l.Username != null && l.Username.ToLower().Contains(search)) ||
+                        (l.Action != null && l.Action.ToLower().Contains(search)) ||
+                        (l.Details != null && l.Details.ToLower().Contains(search))
+                    );
                 }
 
-                var logs = query.OrderByDescending(x => x.Timestamp).Take(1000).ToList();
-                AuditGrid.ItemsSource = logs;
+                // 2. Фильтр по типу действия
+                if (ActionFilter.SelectedItem is ComboBoxItem item && item.Content != null)
+                {
+                    var action = item.Content.ToString();
+                    if (action != "Все действия")
+                    {
+                        query = query.Where(l => l.Action == action);
+                    }
+                }
+
+                // 3. Фильтр по дате "От" (переводим в UTC для PostgreSQL)
+                if (FromPicker.SelectedDate.HasValue)
+                {
+                    var start = FromPicker.SelectedDate.Value.ToUniversalTime();
+                    query = query.Where(l => l.Timestamp >= start);
+                }
+
+                // 4. Фильтр по дате "До" (добавляем 1 день, чтобы включить весь выбранный день)
+                if (ToPicker.SelectedDate.HasValue)
+                {
+                    var end = ToPicker.SelectedDate.Value.AddDays(1).ToUniversalTime();
+                    query = query.Where(l => l.Timestamp < end);
+                }
+
+                // Вытягиваем данные с ограничением в 1000 последних записей
+                var logs = await query
+                    .OrderByDescending(l => l.Timestamp)
+                    .Take(1000)
+                    .ToListAsync();
+
+                if (AuditGrid != null)
+                {
+                    AuditGrid.ItemsSource = logs;
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка загрузки: {ex.Message}");
+                MessageBox.Show($"Ошибка загрузки данных аудита: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private void Filter_Click(object sender, RoutedEventArgs e) => LoadData();
-
-        private void Reset_Click(object sender, RoutedEventArgs e)
+        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            SearchBox.Text = "";
+            // Перезапускаем таймер при каждом вводе символа
+            if (_searchTimer != null)
+            {
+                _searchTimer.Stop();
+                _searchTimer.Start();
+            }
+        }
+
+        private async void Filter_Click(object sender, RoutedEventArgs e)
+        {
+            await LoadLogsAsync();
+        }
+
+        private async void Reset_Click(object sender, RoutedEventArgs e)
+        {
+            // Сбрасываем фильтры к значениям по умолчанию
+            SearchBox.Text = string.Empty;
+            ActionFilter.SelectedIndex = 0;
             FromPicker.SelectedDate = DateTime.Now.AddDays(-7);
             ToPicker.SelectedDate = DateTime.Now;
-            LoadData();
+
+            await LoadLogsAsync();
         }
 
         private void Export_Click(object sender, RoutedEventArgs e)
         {
-            var dlg = new SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = $"AuditLog_{DateTime.Now:yyyyMMdd}.csv" };
-            if (dlg.ShowDialog() == true)
+            var logs = AuditGrid.ItemsSource as IEnumerable<AuditLog>;
+            if (logs == null || !logs.Any())
+            {
+                MessageBox.Show("Нет данных для выгрузки.", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "CSV файл (*.csv)|*.csv",
+                FileName = $"SecurityAudit_{DateTime.Now:yyyyMMdd_HHmm}.csv"
+            };
+
+            if (dialog.ShowDialog() == true)
             {
                 try
                 {
-                    var logs = AuditGrid.ItemsSource as System.Collections.Generic.List<Core.AuditLog>;
-                    if (logs == null) return;
+                    using var writer = new StreamWriter(dialog.FileName, false, Encoding.UTF8);
+                    writer.WriteLine("ID;Время;Пользователь;Действие;Детали");
 
-                    var sb = new StringBuilder();
-                    sb.AppendLine("ID;Date(UTC);User;Action;Details");
                     foreach (var l in logs)
                     {
-                        sb.AppendLine($"{l.Id};{l.Timestamp};{l.Username};{l.Action};\"{l.Details?.Replace("\"", "\"\"")}\"");
+                        string user = string.IsNullOrWhiteSpace(l.Username) ? "Система" : l.Username;
+                        // Заменяем точку с запятой и переносы строк, чтобы не сломать формат CSV
+                        string details = l.Details?.Replace(";", ",").Replace("\n", " ").Replace("\r", "") ?? "";
+
+                        writer.WriteLine($"{l.Id};{l.Timestamp:dd.MM.yyyy HH:mm:ss};{user};{l.Action};{details}");
                     }
-                    File.WriteAllText(dlg.FileName, sb.ToString(), Encoding.UTF8);
-                    MessageBox.Show("Экспорт завершен.");
+                    MessageBox.Show("Журнал аудита успешно выгружен.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
-                catch (Exception ex) { MessageBox.Show($"Ошибка: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка экспорта: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
         private void Close_Click(object sender, RoutedEventArgs e)
         {
-            var window = Window.GetWindow(this) as MainWindow;
-            if (window != null)
+            // Умное закрытие: ищем главное окно и переключаем на тикеты, либо просто скрываем контрол
+            if (Window.GetWindow(this) is MainWindow mainWindow)
             {
-                // CA1416: Вызов безопасен
-                window.OpenTickets_Click(sender, e);
+                mainWindow.OpenTickets_Click(sender, e);
+            }
+            else if (Parent is ContentControl cc)
+            {
+                cc.Content = null;
+            }
+            else
+            {
+                this.Visibility = Visibility.Collapsed;
             }
         }
     }

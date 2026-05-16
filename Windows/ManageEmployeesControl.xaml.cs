@@ -1,46 +1,51 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Versioning; // Добавлено для SupportedOSPlatform
+using System.Runtime.Versioning;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using Microsoft.EntityFrameworkCore;
 using КР_Ханников.Core;
 using КР_Ханников.Data;
+using КР_Ханников.Services;
 
 namespace КР_Ханников.Windows
 {
-    [SupportedOSPlatform("windows")] // Исправлено: CA1416
+    [SupportedOSPlatform("windows")]
     public partial class ManageEmployeesControl : UserControl
     {
-        private List<Employee> _employees = new();
-        private List<User> _users = new();
+        private readonly AuthService _authService;
+        private List<Employee> _allEmployees = new();
+        private List<User> _allUsers = new();
         private string _searchText = string.Empty;
 
-        public ManageEmployeesControl()
+        public ManageEmployeesControl(AuthService authService)
         {
             InitializeComponent();
-            LoadData();
+            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
+
+            Loaded += async (s, e) => await LoadDataAsync();
         }
 
-        private void LoadData()
+        private async Task LoadDataAsync()
         {
             try
             {
-                using var db = new AppDbContext();
+                using var db = App.CreateDbContext();
 
-                _employees = db.Employees
+                _allEmployees = await db.Employees
                     .Include(e => e.User)
                     .AsNoTracking()
                     .OrderBy(e => e.Name)
-                    .ToList();
+                    .ToListAsync();
 
-                _users = db.Users
+                _allUsers = await db.Users
                     .AsNoTracking()
                     .OrderBy(u => u.Username)
-                    .ToList();
+                    .ToListAsync();
 
                 ApplyFilter();
                 LoadUsers();
@@ -54,7 +59,7 @@ namespace КР_Ханников.Windows
 
         private void ApplyFilter()
         {
-            var filtered = _employees.AsEnumerable();
+            var filtered = _allEmployees.AsEnumerable();
 
             if (!string.IsNullOrWhiteSpace(_searchText))
             {
@@ -73,9 +78,20 @@ namespace КР_Ханников.Windows
 
         private void LoadUsers()
         {
+            var filtered = _allUsers.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(_searchText))
+            {
+                var search = _searchText.ToLower();
+                filtered = filtered.Where(u =>
+                    (u.Username != null && u.Username.ToLower().Contains(search)) ||
+                    (u.Role != null && u.Role.ToLower().Contains(search)) ||
+                    (u.Email != null && u.Email.ToLower().Contains(search)));
+            }
+
             if (UsersGrid != null)
             {
-                UsersGrid.ItemsSource = _users;
+                UsersGrid.ItemsSource = filtered.ToList();
             }
         }
 
@@ -85,26 +101,27 @@ namespace КР_Ханников.Windows
             {
                 _searchText = textBox.Text;
                 ApplyFilter();
+                LoadUsers();
             }
         }
 
-        private void Refresh_Click(object sender, RoutedEventArgs e)
+        private async void Refresh_Click(object sender, RoutedEventArgs e)
         {
             if (SearchBox != null) SearchBox.Text = string.Empty;
-            LoadData();
+            await LoadDataAsync();
         }
 
-        private void AddEmployee_Click(object sender, RoutedEventArgs e)
+        private async void AddEmployee_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                // CA1416: AddEmployeeWindow теперь имеет атрибут SupportedOSPlatform
+                // ИСПРАВЛЕНИЕ: Вызываем конструктор без параметров, чтобы исправить ошибку CS1729
                 var addWindow = new AddEmployeeWindow();
                 addWindow.Owner = Window.GetWindow(this);
 
                 if (addWindow.ShowDialog() == true)
                 {
-                    LoadData();
+                    await LoadDataAsync();
                 }
             }
             catch (Exception ex)
@@ -118,9 +135,7 @@ namespace КР_Ханников.Windows
         {
             try
             {
-                var statsWindow = new SupportStatisticsWindow();
-                statsWindow.Owner = Window.GetWindow(this);
-                statsWindow.ShowDialog();
+                MessageBox.Show("Расширенная статистика по сотрудникам находится в разработке.\nИспользуйте вкладку 'Дашборд' для общей сводки.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
@@ -148,74 +163,97 @@ namespace КР_Ханников.Windows
             }
         }
 
-        private void DeleteEmployee_Click(object sender, RoutedEventArgs e)
+        private async void DeleteEmployee_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.DataContext is Employee emp)
             {
-                var result = MessageBox.Show(
-                    $"Вы уверены, что хотите удалить сотрудника \"{emp.Name}\"?\n" +
-                    "Связанная учетная запись также будет удалена.",
-                    "Подтверждение удаления",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
-
-                if (result == MessageBoxResult.Yes)
-                {
-                    try
-                    {
-                        using var db = new AppDbContext();
-                        var dbEmp = db.Employees.Include(x => x.User).FirstOrDefault(x => x.Id == emp.Id);
-
-                        if (dbEmp != null)
-                        {
-                            if (dbEmp.User != null) db.Users.Remove(dbEmp.User);
-                            db.Employees.Remove(dbEmp);
-
-                            db.SaveChanges();
-                            LoadData();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Ошибка удаления: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                }
+                await DeleteUserLogicAsync(emp.UserId, emp.Name);
             }
         }
 
-        private void DeleteUser_Click(object sender, RoutedEventArgs e)
+        private async void DeleteUser_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.DataContext is User user)
             {
-                if (user.Role == "Admin")
+                await DeleteUserLogicAsync(user.Id, user.Username);
+            }
+        }
+
+        private async Task DeleteUserLogicAsync(int userIdToDelete, string displayName)
+        {
+            if (userIdToDelete == _authService.CurrentUser?.Id)
+            {
+                MessageBox.Show("Вы не можете удалить собственную учетную запись!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                using var db = App.CreateDbContext();
+                var userToDelete = await db.Users.FindAsync(userIdToDelete);
+
+                if (userToDelete != null && userToDelete.Role == "Admin" && _authService.CurrentUser?.Role != "Admin")
                 {
-                    MessageBox.Show("Удаление администраторов через это меню запрещено.", "Ограничение", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("Удаление администраторов разрешено только другим администраторам.", "Ограничение", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
+            }
+            catch (Exception) { /* Игнорируем ошибку при проверке прав */ }
 
-                var result = MessageBox.Show(
-                    $"Удалить пользователя \"{user.Username}\"?\nЭто действие необратимо.",
-                    "Подтверждение удаления",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
+            var result = MessageBox.Show(
+                $"Вы уверены, что хотите удалить пользователя '{displayName}'?\nЭто действие закроет ему доступ к системе, а его незакрытые тикеты будут переведены в общую очередь.",
+                "Удаление пользователя",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
 
-                if (result == MessageBoxResult.Yes)
+            if (result == MessageBoxResult.Yes)
+            {
+                try
                 {
-                    try
+                    using var db = App.CreateDbContext();
+
+                    var user = await db.Users.FindAsync(userIdToDelete);
+                    if (user == null) return;
+
+                    var employee = await db.Employees.FirstOrDefaultAsync(emp => emp.UserId == userIdToDelete);
+                    if (employee != null)
                     {
-                        using var db = new AppDbContext();
-                        var dbUser = db.Users.Find(user.Id);
-                        if (dbUser != null)
+                        var activeTickets = await db.Tickets.Where(t => t.AssigneeEmployeeId == employee.Id && t.Status != Constants.TicketStatus.Closed).ToListAsync();
+                        foreach (var t in activeTickets)
                         {
-                            db.Users.Remove(dbUser);
-                            db.SaveChanges();
-                            LoadData();
+                            t.AssigneeEmployeeId = null;
                         }
+                        db.Employees.Remove(employee);
                     }
-                    catch (Exception ex)
+
+                    var client = await db.Clients.FirstOrDefaultAsync(c => c.UserId == userIdToDelete);
+                    if (client != null)
                     {
-                        MessageBox.Show($"Ошибка удаления: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                        var clientTickets = await db.Tickets.Where(t => t.ClientId == client.Id && t.Status != Constants.TicketStatus.Closed).ToListAsync();
+                        foreach (var t in clientTickets)
+                        {
+                            t.Status = Constants.TicketStatus.Closed;
+                            t.ClosedAt = DateTime.UtcNow;
+                        }
+                        db.Clients.Remove(client);
                     }
+
+                    db.Users.Remove(user);
+
+                    db.AuditLogs.Add(new AuditLog
+                    {
+                        Username = _authService.CurrentUser?.Username ?? "Система",
+                        Action = "Удаление пользователя",
+                        Details = $"Удален аккаунт ID: {userIdToDelete} ({displayName})",
+                        Timestamp = DateTime.UtcNow
+                    });
+
+                    await db.SaveChangesAsync();
+                    await LoadDataAsync();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при удалении: {ex.Message}\n\nВозможно, у пользователя есть связанные данные (например, комментарии), которые блокируют удаление.", "Ошибка SQL", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -293,23 +331,45 @@ namespace КР_Ханников.Windows
                     FontWeight = FontWeights.SemiBold
                 };
 
-                saveButton.Click += (s, ev) =>
+                saveButton.Click += async (s, ev) =>
                 {
                     try
                     {
-                        using var db = new AppDbContext();
-                        var dbUser = db.Users.Find(user.Id);
-                        if (dbUser != null)
+                        using var db = App.CreateDbContext();
+                        var dbUser = await db.Users.FindAsync(user.Id);
+                        var newRole = comboBox.SelectedItem?.ToString() ?? "Client";
+
+                        if (dbUser != null && dbUser.Role != newRole)
                         {
-                            dbUser.Role = comboBox.SelectedItem?.ToString() ?? "Client";
-                            db.SaveChanges();
+                            dbUser.Role = newRole;
+
+                            // Если пользователь стал сотрудником, создаем профиль Employee, если его нет
+                            if (newRole == "Admin" || newRole == "Support")
+                            {
+                                var existingEmp = await db.Employees.FirstOrDefaultAsync(e => e.UserId == dbUser.Id);
+                                if (existingEmp == null)
+                                {
+                                    db.Employees.Add(new Employee
+                                    {
+                                        UserId = dbUser.Id,
+                                        Name = dbUser.Username,
+                                        Role = newRole,
+                                        MaxActiveTickets = 5
+                                    });
+                                }
+                                else
+                                {
+                                    existingEmp.Role = newRole;
+                                }
+                            }
+
+                            await db.SaveChangesAsync();
                         }
                         dialog.DialogResult = true;
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"Ошибка сохранения: {ex.Message}", "Ошибка",
-                            MessageBoxButton.OK, MessageBoxImage.Error);
+                        MessageBox.Show($"Ошибка сохранения: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 };
 
@@ -321,13 +381,12 @@ namespace КР_Ханников.Windows
 
                 if (dialog.ShowDialog() == true)
                 {
-                    LoadData();
+                    _ = LoadDataAsync();
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка редактирования: {ex.Message}", "Ошибка",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Ошибка редактирования: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }

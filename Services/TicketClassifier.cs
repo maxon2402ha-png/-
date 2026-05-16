@@ -33,46 +33,41 @@ namespace КР_Ханников.Core
             TryLoadModels();
         }
 
-        public (TicketCategory category, TicketPriority priority) Classify(string title, string description)
+        public (TicketCategory category, TicketPriority priority, bool isMlUsed) Classify(string title, string description)
         {
-            // Гарантируем, что строки не null (исправление CS8604)
             var safeTitle = title ?? string.Empty;
             var safeDescription = description ?? string.Empty;
             var text = $"{safeTitle} {safeDescription}".Trim();
 
-            // Если текст пустой или модели ML не загрузились — используем правила
+            // Если текста нет или ML не загружен — падаем на правила
             if (string.IsNullOrWhiteSpace(text) || !IsModelLoaded)
             {
-                Debug.WriteLine("[Classifier] Используются правила (Rule-Based)");
                 return _fallback.Classify(safeTitle, safeDescription);
             }
 
             try
             {
-                Debug.WriteLine("[Classifier] Используется ML.NET");
                 var input = new TextInput { Text = text };
 
-                // Предсказание категории
+                // 1. Сначала получаем предсказания от ML-моделей (вернули эти строки!)
                 var catPred = _categoryEngine!.Predict(input);
-                var category = Enum.TryParse<TicketCategory>(catPred.CategoryLabel, out var catResult)
-                    ? catResult
-                    : TicketCategory.General;
-
-                // Предсказание приоритета
                 var prioPred = _priorityEngine!.Predict(input);
-                var priority = Enum.TryParse<TicketPriority>(prioPred.PriorityLabel, out var prioResult)
-                    ? prioResult
-                    : TicketPriority.Normal;
 
-                return (category, priority);
+                // 2. Затем безопасно конвертируем текст в Enum с явным указанием типов <...>
+                var category = Enum.TryParse<TicketCategory>(catPred.CategoryLabel, out var catResult)
+                    ? catResult : TicketCategory.General;
+
+                var priority = Enum.TryParse<TicketPriority>(prioPred.PriorityLabel, out var prioResult)
+                    ? prioResult : TicketPriority.Normal;
+
+                return (category, priority, true);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[TicketClassifier] Ошибка ML: {ex.Message}. Переход на правила.");
+                Debug.WriteLine($"[TicketClassifier] Ошибка ML: {ex.Message}");
                 return _fallback.Classify(safeTitle, safeDescription);
             }
         }
-
         private void TryLoadModels()
         {
             try

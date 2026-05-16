@@ -4,23 +4,20 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="1000"
+             d:DesignHeight="600" d:DesignWidth="1100"
              FontFamily="Segoe UI"
              Background="{DynamicResource Brush.Background}">
 
     <UserControl.Resources>
         <Style TargetType="DataGridRow">
             <Setter Property="Background" Value="{DynamicResource Brush.Surface}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0,4"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Divider}"/>
+            <Setter Property="Height" Value="52"/>
             <Style.Triggers>
-                <DataTrigger Binding="{Binding Action}" Value="LoginFailure">
-                    <Setter Property="Background" Value="#FEE2E2"/>
-                </DataTrigger>
                 <DataTrigger Binding="{Binding Action}" Value="SecurityAlert">
-                    <Setter Property="Background" Value="#FEF3C7"/>
+                    <Setter Property="Background" Value="#FFFBEB"/>
                 </DataTrigger>
-
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}"/>
                 </Trigger>
@@ -35,15 +32,17 @@
             <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Padding" Value="16,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}"/>
             <Setter Property="BorderThickness" Value="0,0,0,1"/>
         </Style>
 
         <Style TargetType="DataGridCell">
-            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Padding" Value="0"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="Transparent"/>
@@ -64,9 +63,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="6" 
-                                Padding="{TemplateBinding Padding}">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -92,11 +89,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6" 
-                                Padding="{TemplateBinding Padding}">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -121,21 +114,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
                             <Grid>
-                                <ScrollViewer x:Name="PART_ContentHost" 
-                                              VerticalAlignment="Center" 
-                                              Margin="10,0"/>
-                                <TextBlock x:Name="Placeholder"
-                                           Text="Поиск по пользователю..."
-                                           Foreground="{DynamicResource Brush.TextMuted}"
-                                           VerticalAlignment="Center"
-                                           Margin="12,0"
-                                           IsHitTestVisible="False"
-                                           Visibility="Collapsed"/>
+                                <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center" Margin="10,0"/>
+                                <TextBlock x:Name="Placeholder" Text="Поиск по деталям..." Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="12,0" IsHitTestVisible="False" Visibility="Collapsed"/>
                             </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -190,152 +172,127 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" 
-                Background="{DynamicResource Brush.Surface}" 
-                Padding="24,20" 
-                BorderBrush="{DynamicResource Brush.Border}" 
-                BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Background="{DynamicResource Brush.Surface}" Padding="32,24" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="16"/>
+                    <RowDefinition Height="20"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0">
-                    <TextBlock Text="Журнал безопасности" 
-                               FontSize="22" 
-                               FontWeight="Bold" 
-                               Foreground="{DynamicResource Brush.TextPrimary}"/>
-                    <TextBlock Text="Мониторинг активности и действий пользователей в системе" 
-                               FontSize="13" 
-                               Foreground="{DynamicResource Brush.TextSecondary}" 
-                               Margin="0,6,0,0"/>
+                    <TextBlock Text="Журнал безопасности" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource Brush.TextPrimary}"/>
+                    <TextBlock Text="Мониторинг активности и системных изменений в платформе" FontSize="14" Foreground="{DynamicResource Brush.TextSecondary}" Margin="0,6,0,0"/>
                 </StackPanel>
 
                 <Grid Grid.Row="2">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" MaxWidth="240"/>
+                        <ColumnDefinition Width="*" MaxWidth="280"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBox x:Name="SearchBox" 
-                             Grid.Column="0"
-                             Style="{StaticResource SearchTextBox}"
-                             ToolTip="Поиск по имени пользователя или действию"/>
+                    <TextBox x:Name="SearchBox" Grid.Column="0" Style="{StaticResource SearchTextBox}"/>
 
-                    <StackPanel Grid.Column="1" 
-                                Orientation="Horizontal" 
-                                Margin="16,0,0,0"
-                                VerticalAlignment="Center">
-                        <TextBlock Text="С:" 
-                                   VerticalAlignment="Center" 
-                                   Foreground="{DynamicResource Brush.TextSecondary}" 
-                                   FontSize="13"
-                                   Margin="0,0,8,0"/>
-                        <DatePicker x:Name="FromPicker" Width="130"/>
+                    <ComboBox x:Name="ActionFilter" Grid.Column="1" Margin="16,0,0,0" Width="140" Height="36" VerticalContentAlignment="Center">
+                        <ComboBoxItem Content="Все действия" IsSelected="True"/>
+                        <ComboBoxItem Content="Create"/>
+                        <ComboBoxItem Content="Update"/>
+                        <ComboBoxItem Content="Delete"/>
+                        <ComboBoxItem Content="Login"/>
+                        <ComboBoxItem Content="Logout"/>
+                    </ComboBox>
 
-                        <TextBlock Text="По:" 
-                                   VerticalAlignment="Center" 
-                                   Foreground="{DynamicResource Brush.TextSecondary}" 
-                                   FontSize="13"
-                                   Margin="16,0,8,0"/>
-                        <DatePicker x:Name="ToPicker" Width="130"/>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Период:" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextSecondary}" FontSize="13" Margin="0,0,8,0"/>
+                        <DatePicker x:Name="FromPicker" Width="120"/>
+                        <TextBlock Text="—" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextSecondary}" Margin="8,0"/>
+                        <DatePicker x:Name="ToPicker" Width="120"/>
                     </StackPanel>
 
-                    <StackPanel Grid.Column="2" 
-                                Orientation="Horizontal" 
-                                Margin="16,0,0,0">
-                        <Button Content="Найти" 
-                                Click="Filter_Click" 
-                                Style="{StaticResource PrimaryButton}"/>
-                        <Button Content="Сбросить" 
-                                Click="Reset_Click" 
-                                Style="{StaticResource SecondaryButton}"
-                                Margin="8,0,0,0"/>
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="Сбросить" Click="Reset_Click" Style="{StaticResource SecondaryButton}" Margin="0,0,12,0"/>
+                        <Button Content="Применить фильтры" Click="Filter_Click" Style="{StaticResource PrimaryButton}"/>
                     </StackPanel>
                 </Grid>
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" 
-                Margin="24,16" 
-                Background="{DynamicResource Brush.Surface}" 
-                BorderBrush="{DynamicResource Brush.Border}" 
-                BorderThickness="1"
-                CornerRadius="8">
-            <DataGrid x:Name="AuditGrid" 
-                      AutoGenerateColumns="False" 
-                      IsReadOnly="True" 
-                      GridLinesVisibility="Horizontal" 
-                      HorizontalGridLinesBrush="{DynamicResource Brush.Divider}"
-                      VerticalGridLinesBrush="Transparent"
-                      Background="Transparent"
-                      BorderThickness="0"
-                      RowHeaderWidth="0"
-                      CanUserResizeRows="False"
-                      SelectionMode="Single"
-                      HeadersVisibility="Column">
+        <Border Grid.Row="1" Margin="32,24" Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="8">
+            <DataGrid x:Name="AuditGrid" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{DynamicResource Brush.Divider}" VerticalGridLinesBrush="Transparent" Background="Transparent" BorderThickness="0" RowHeaderWidth="0" CanUserResizeRows="False" SelectionMode="Single" HeadersVisibility="Column">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="ID" 
-                                        Binding="{Binding Id}" 
-                                        Width="70">
+                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="70">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}"/>
                                 <Setter Property="VerticalAlignment" Value="Center"/>
-                                <Setter Property="Padding" Value="12,0"/>
+                                <Setter Property="Margin" Value="16,0"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <DataGridTextColumn Header="Дата и время" 
-                                        Binding="{Binding Timestamp, StringFormat=dd.MM.yyyy HH:mm:ss}" 
-                                        Width="160">
+                    <DataGridTextColumn Header="Дата и время" Binding="{Binding Timestamp, StringFormat=dd.MM.yyyy HH:mm:ss}" Width="160">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}"/>
                                 <Setter Property="VerticalAlignment" Value="Center"/>
-                                <Setter Property="Padding" Value="12,0"/>
+                                <Setter Property="Margin" Value="16,0"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <DataGridTextColumn Header="Пользователь" 
-                                        Binding="{Binding Username}" 
-                                        Width="150">
+                    <DataGridTextColumn Header="Пользователь" Binding="{Binding Username, TargetNullValue='Система'}" Width="140">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="FontWeight" Value="SemiBold"/>
                                 <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
                                 <Setter Property="VerticalAlignment" Value="Center"/>
-                                <Setter Property="Padding" Value="12,0"/>
+                                <Setter Property="Margin" Value="16,0"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <DataGridTextColumn Header="Действие" 
-                                        Binding="{Binding Action}" 
-                                        Width="180">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
-                                <Setter Property="VerticalAlignment" Value="Center"/>
-                                <Setter Property="Padding" Value="12,0"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTemplateColumn Header="Действие" Width="130">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border x:Name="BadgeBorder" Background="{DynamicResource Brush.SurfaceAlt}" CornerRadius="6" Padding="10,4" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="16,0">
+                                    <TextBlock x:Name="BadgeText" Text="{Binding Action}" Foreground="{DynamicResource Brush.TextSecondary}" FontSize="12" FontWeight="Bold"/>
+                                </Border>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding Action}" Value="Create">
+                                        <Setter TargetName="BadgeBorder" Property="Background" Value="{DynamicResource Brush.SuccessLight}"/>
+                                        <Setter TargetName="BadgeText" Property="Foreground" Value="{DynamicResource Brush.Success}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Action}" Value="Update">
+                                        <Setter TargetName="BadgeBorder" Property="Background" Value="{DynamicResource Brush.PrimaryLight}"/>
+                                        <Setter TargetName="BadgeText" Property="Foreground" Value="{DynamicResource Brush.Primary}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Action}" Value="Delete">
+                                        <Setter TargetName="BadgeBorder" Property="Background" Value="#FEE2E2"/>
+                                        <Setter TargetName="BadgeText" Property="Foreground" Value="{DynamicResource Brush.Danger}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Action}" Value="Login">
+                                        <Setter TargetName="BadgeBorder" Property="Background" Value="#F3E8FF"/>
+                                        <Setter TargetName="BadgeText" Property="Foreground" Value="#9333EA"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Action}" Value="LoginFailure">
+                                        <Setter TargetName="BadgeBorder" Property="Background" Value="#FECACA"/>
+                                        <Setter TargetName="BadgeText" Property="Foreground" Value="#DC2626"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
-                    <DataGridTextColumn Header="Детали" 
-                                        Binding="{Binding Details}" 
-                                        Width="*">
+                    <DataGridTextColumn Header="Детали изменения" Binding="{Binding Details}" Width="*">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}"/>
                                 <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                <Setter Property="TextWrapping" Value="NoWrap"/>
                                 <Setter Property="VerticalAlignment" Value="Center"/>
-                                <Setter Property="Padding" Value="12,0"/>
+                                <Setter Property="Margin" Value="16,0"/>
                                 <Setter Property="ToolTip" Value="{Binding Details}"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
@@ -344,32 +301,18 @@
             </DataGrid>
         </Border>
 
-        <Border Grid.Row="2" 
-                Background="{DynamicResource Brush.Surface}" 
-                Padding="24,16" 
-                BorderBrush="{DynamicResource Brush.Border}" 
-                BorderThickness="0,1,0,0">
+        <Border Grid.Row="2" Background="{DynamicResource Brush.Surface}" Padding="32,16" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0"
-                           Text="Отображаются последние 1000 записей" 
-                           VerticalAlignment="Center" 
-                           Foreground="{DynamicResource Brush.TextMuted}"
-                           FontSize="13"/>
+                <TextBlock Grid.Column="0" Text="Показаны последние 1000 записей журнала" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextMuted}" FontSize="13"/>
 
-                <StackPanel Grid.Column="1" 
-                            Orientation="Horizontal">
-                    <Button Content="Экспорт CSV" 
-                            Click="Export_Click" 
-                            Style="{StaticResource SecondaryButton}"/>
-                    <Button Content="Закрыть" 
-                            Click="Close_Click" 
-                            Style="{StaticResource SecondaryButton}"
-                            Margin="8,0,0,0"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="Выгрузить в CSV" Click="Export_Click" Style="{StaticResource SecondaryButton}" Width="150"/>
+                    <Button Content="Закрыть" Click="Close_Click" Style="{StaticResource PrimaryButton}" Margin="12,0,0,0" Width="100"/>
                 </StackPanel>
             </Grid>
         </Border>

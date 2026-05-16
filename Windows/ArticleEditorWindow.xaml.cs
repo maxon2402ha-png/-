@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.Versioning;
 using System.Windows;
+using System.Windows.Input;
 using КР_Ханников.Core;
 using КР_Ханников.Data;
 
@@ -31,6 +32,15 @@ namespace КР_Ханников.Windows
 
             TitleBox.Text = article.Title;
             ContentBox.Text = article.Content;
+        }
+
+        // Позволяет перетаскивать окно без системных рамок
+        private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Left)
+            {
+                this.DragMove();
+            }
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)

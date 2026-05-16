@@ -8,16 +8,18 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Versioning;
 using System.Text;
-using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Threading;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Runtime.Versioning;
+using System.Windows.Threading;
 using КР_Ханников.Core;
 using КР_Ханников.Data;
 using КР_Ханников.Services;
@@ -31,8 +33,8 @@ namespace КР_Ханников.Windows
         private readonly AuditService _audit;
         private readonly DispatcherTimer _timer;
 
-        private List<Ticket> _periodTickets = new List<Ticket>();
-        private List<Ticket> _allActiveTickets = new List<Ticket>();
+        private List<Ticket> _periodTickets = [];
+        private List<Ticket> _allActiveTickets = [];
 
         private UserUiSettings? _userSettings;
         private int _defaultPeriodDays = 30;
@@ -79,19 +81,19 @@ namespace КР_Ханников.Windows
         private string _kpiAvgResolutionText = "—";
         public string KpiAvgResolutionText { get => _kpiAvgResolutionText; set { _kpiAvgResolutionText = value; OnPropertyChanged(); } }
 
-        public SeriesCollection SeriesTicketsByDay { get; } = new SeriesCollection();
-        public SeriesCollection SeriesCategories { get; } = new SeriesCollection();
-        public SeriesCollection SeriesPriorities { get; } = new SeriesCollection();
-        public SeriesCollection SeriesByAssignee { get; } = new SeriesCollection();
+        public SeriesCollection SeriesTicketsByDay { get; } = [];
+        public SeriesCollection SeriesCategories { get; } = [];
+        public SeriesCollection SeriesPriorities { get; } = [];
+        public SeriesCollection SeriesByAssignee { get; } = [];
 
-        private string[] _labelsDays = Array.Empty<string>();
+        private string[] _labelsDays = [];
         public string[] LabelsDays
         {
             get => _labelsDays;
             set { _labelsDays = value; OnPropertyChanged(); }
         }
 
-        private string[] _labelsAssignees = Array.Empty<string>();
+        private string[] _labelsAssignees = [];
         public string[] LabelsAssignees
         {
             get => _labelsAssignees;
@@ -105,11 +107,6 @@ namespace КР_Ханников.Windows
         {
         }
 
-        public DashboardControl(AppDbContext context, AuthService authService)
-            : this(authService, new AuditService(authService))
-        {
-        }
-
         public DashboardControl(AuthService authService, AuditService auditService)
         {
             InitializeComponent();
@@ -119,7 +116,7 @@ namespace КР_Ханников.Windows
             _audit = auditService ?? throw new ArgumentNullException(nameof(auditService));
 
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
-            _timer.Tick += (s, e) => LoadFromDb();
+            _timer.Tick += async (s, e) => await LoadFromDbAsync();
 
             if (CheckUserAccess())
             {
@@ -133,17 +130,18 @@ namespace КР_Ханников.Windows
                 ApplyUserSettings();
                 InitializeFilters();
 
-                Loaded += (s, e) =>
+                Loaded += async (s, e) =>
                 {
-                    LoadFromDb();
-                    _timer.Start();
+                    await LoadFromDbAsync();
+                    if (_userSettings?.RefreshRateSeconds > 0)
+                        _timer.Start();
                 };
                 Unloaded += (s, e) => _timer.Stop();
             }
             else
             {
                 Visibility = Visibility.Collapsed;
-                MessageBox.Show("Нет доступа к Дашборду.");
+                MessageBox.Show("Нет доступа к Дашборду.", "Отказано в доступе", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -173,19 +171,24 @@ namespace КР_Ханников.Windows
                     context.SaveChanges();
                 }
 
-                if (KpiSection != null)
-                    KpiSection.Visibility = _userSettings.ShowKpiBlock ? Visibility.Visible : Visibility.Collapsed;
+                if (FindName("KpiSection") is FrameworkElement kpiSection)
+                    kpiSection.Visibility = _userSettings.ShowKpiBlock ? Visibility.Visible : Visibility.Collapsed;
 
-                if (ChartsSection != null)
-                    ChartsSection.Visibility = _userSettings.ShowChartsBlock ? Visibility.Visible : Visibility.Collapsed;
+                if (FindName("ChartsSection") is FrameworkElement chartsSection)
+                    chartsSection.Visibility = _userSettings.ShowChartsBlock ? Visibility.Visible : Visibility.Collapsed;
 
-                if (TableSection != null)
-                    TableSection.Visibility = _userSettings.ShowDetailedTable ? Visibility.Visible : Visibility.Collapsed;
+                if (FindName("TableSection") is FrameworkElement tableSection)
+                    tableSection.Visibility = _userSettings.ShowDetailedTable ? Visibility.Visible : Visibility.Collapsed;
 
                 if (_userSettings.RefreshRateSeconds > 0)
+                {
                     _timer.Interval = TimeSpan.FromSeconds(_userSettings.RefreshRateSeconds);
+                    if (IsLoaded) _timer.Start();
+                }
                 else
+                {
                     _timer.Stop();
+                }
 
                 _defaultPeriodDays = _userSettings.DefaultPeriodDays > 0
                     ? _userSettings.DefaultPeriodDays
@@ -200,23 +203,16 @@ namespace КР_Ханников.Windows
 
         private void InitializeFilters()
         {
-            if (ToDatePicker != null)
-                ToDatePicker.SelectedDate = DateTime.Now;
-
-            if (FromDatePicker != null)
-                FromDatePicker.SelectedDate = DateTime.Now.AddDays(-_defaultPeriodDays);
+            ToDatePicker.SelectedDate = DateTime.Now;
+            FromDatePicker.SelectedDate = DateTime.Now.AddDays(-_defaultPeriodDays);
 
             PopulateAssignees();
 
-            var catList = new List<object> { "Все" };
-            catList.AddRange(Enum.GetValues(typeof(TicketCategory)).Cast<object>());
-            if (CategoryFilter != null)
-                CategoryFilter.ItemsSource = catList;
+            List<object> catList = ["Все", .. Enum.GetValues(typeof(TicketCategory)).Cast<object>()];
+            CategoryFilter.ItemsSource = catList;
 
-            var prioList = new List<object> { "Все" };
-            prioList.AddRange(Enum.GetValues(typeof(TicketPriority)).Cast<object>());
-            if (PriorityFilter != null)
-                PriorityFilter.ItemsSource = prioList;
+            List<object> prioList = ["Все", .. Enum.GetValues(typeof(TicketPriority)).Cast<object>()];
+            PriorityFilter.ItemsSource = prioList;
 
             SafeSelectIndex(StatusFilter, 0);
             SafeSelectIndex(CategoryFilter, 0);
@@ -237,13 +233,13 @@ namespace КР_Ханников.Windows
             if (wnd.ShowDialog() == true)
             {
                 ApplyUserSettings();
-                LoadFromDb();
+                _ = LoadFromDbAsync();
             }
         }
 
-        private void SafeSelectIndex(ComboBox? box, int index)
+        private static void SafeSelectIndex(ComboBox box, int index)
         {
-            if (box != null)
+            if (box.Items.Count > index)
                 box.SelectedIndex = index;
         }
 
@@ -253,22 +249,18 @@ namespace КР_Ханников.Windows
             {
                 using var context = App.CreateDbContext();
 
-                var names = context.Employees
+                List<string> names = [.. context.Employees
                     .Include(e => e.User)
                     .AsNoTracking()
                     .Where(e => e.User != null)
                     .Select(e => e.User!.Username)
                     .Distinct()
-                    .OrderBy(n => n)
-                    .ToList();
+                    .OrderBy(n => n)];
 
                 names.Insert(0, "Все");
 
-                if (AssigneeFilter != null)
-                {
-                    AssigneeFilter.ItemsSource = names;
-                    AssigneeFilter.SelectedIndex = 0;
-                }
+                AssigneeFilter.ItemsSource = names;
+                AssigneeFilter.SelectedIndex = 0;
             }
             catch (Exception ex)
             {
@@ -276,47 +268,91 @@ namespace КР_Ханников.Windows
             }
         }
 
-        private void LoadFromDb()
+        private async Task LoadFromDbAsync()
         {
             try
             {
                 LastUpdatedText = "Загрузка...";
 
-                var endDate = ToDatePicker?.SelectedDate?.Date
-                                  .AddDays(1)
-                                  .AddSeconds(-1)
-                              ?? DateTime.UtcNow;
-
-                var startDate = FromDatePicker?.SelectedDate?.Date
-                                ?? endDate.AddDays(-365);
-
+                var endDate = ToDatePicker.SelectedDate?.Date.AddDays(1).AddSeconds(-1) ?? DateTime.UtcNow;
+                var startDate = FromDatePicker.SelectedDate?.Date ?? endDate.AddDays(-365);
                 var startUtc = startDate.ToUniversalTime();
                 var endUtc = endDate.ToUniversalTime();
 
                 using (var db = App.CreateDbContext())
                 {
-                    _periodTickets = db.Tickets
+                    _periodTickets = await db.Tickets
                         .Include(t => t.Solution)
                         .Include(t => t.Assignee).ThenInclude(a => a.User)
                         .AsNoTracking()
                         .Where(t => t.CreatedAt >= startUtc && t.CreatedAt <= endUtc)
-                        .ToList();
+                        .ToListAsync();
 
-                    var openTickets = db.Tickets
+                    var openTickets = await db.Tickets
                         .AsNoTracking()
                         .Where(t => t.Status != Constants.TicketStatus.Closed)
-                        .ToList();
+                        .ToListAsync();
 
-                    _allActiveTickets = openTickets.Union(_periodTickets.Where(t => t.Status == Constants.TicketStatus.Closed)).ToList();
+                    // IDE0305: Оптимизированная инициализация списка
+                    _allActiveTickets = [.. openTickets.Union(_periodTickets.Where(t => t.Status == Constants.TicketStatus.Closed))];
                 }
 
                 UpdateDashboard();
+
+                await UpdatePerformanceMatrixAsync();
+
+                LastUpdatedText = $"Обновлено: {DateTime.Now:HH:mm:ss}";
             }
             catch (Exception ex)
             {
                 LastUpdatedText = "Ошибка";
-                MessageBox.Show($"Ошибка загрузки дашборда:\n{ex.Message}",
-                    "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                Debug.WriteLine($"Ошибка загрузки дашборда: {ex.Message}");
+            }
+        }
+
+        private async Task UpdatePerformanceMatrixAsync()
+        {
+            try
+            {
+                var fromDate = FromDatePicker.SelectedDate?.Date.ToUniversalTime() ?? DateTime.UtcNow.AddDays(-30);
+                var toDate = ToDatePicker.SelectedDate?.Date.AddDays(1).AddSeconds(-1).ToUniversalTime() ?? DateTime.UtcNow;
+
+                using var db = App.CreateDbContext();
+                var kpiService = new KpiService(db);
+
+                var supportEmployees = await db.Employees
+                    .Include(e => e.User)
+                    .Where(e => e.User != null && e.User.Role == Constants.UserRoles.Support)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                var matrixData = new List<EmployeePerformanceVm>();
+
+                foreach (var emp in supportEmployees)
+                {
+                    int workload = await kpiService.CalculateEmployeeWorkloadAsync(emp.Id);
+                    double sla = await kpiService.CalculateSlaComplianceAsync(emp.Id, fromDate, toDate);
+                    double art = await kpiService.CalculateArtAsync(emp.Id, fromDate, toDate);
+
+                    var activeEmpTickets = await db.Tickets
+                        .CountAsync(t => t.AssigneeEmployeeId == emp.Id && t.Status != Constants.TicketStatus.Closed && t.Status != Constants.TicketStatus.Resolved);
+
+                    matrixData.Add(new EmployeePerformanceVm
+                    {
+                        Name = emp.Name,
+                        ActiveTickets = activeEmpTickets,
+                        WorkloadPoints = workload,
+                        SlaPercentage = sla,
+                        ArtHours = art
+                    });
+                }
+
+                // Оставляем ToList(), так как ItemsSource имеет тип IEnumerable
+                PerformanceMatrixGrid.ItemsSource = matrixData.OrderByDescending(m => m.WorkloadPoints).ToList();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка расчета матрицы компетенций: {ex.Message}");
             }
         }
 
@@ -325,15 +361,14 @@ namespace КР_Ханников.Windows
             try
             {
                 string statusFilter = GetComboText(StatusFilter);
-                string assigneeFilter = (AssigneeFilter?.SelectedItem as string) ?? GetComboText(AssigneeFilter);
-                object? catSelected = CategoryFilter?.SelectedItem;
-                object? prioSelected = PriorityFilter?.SelectedItem;
+                string assigneeFilter = (AssigneeFilter.SelectedItem as string) ?? GetComboText(AssigneeFilter);
+                object? catSelected = CategoryFilter.SelectedItem;
+                object? prioSelected = PriorityFilter.SelectedItem;
 
                 var kpiSet = ApplyFilters(_allActiveTickets, statusFilter, assigneeFilter, catSelected, prioSelected);
                 CalculateKpi(kpiSet);
 
-                // Исправлено CS8602: Гарантируем, что список не null, перед передачей
-                if (_periodTickets == null) _periodTickets = new List<Ticket>();
+                _periodTickets ??= [];
 
                 var categoryChartSet = ApplyFilters(_periodTickets, statusFilter, assigneeFilter, null, prioSelected);
                 var priorityChartSet = ApplyFilters(_periodTickets, statusFilter, assigneeFilter, catSelected, null);
@@ -341,11 +376,8 @@ namespace КР_Ханников.Windows
 
                 BuildCharts(_periodTickets, categoryChartSet, priorityChartSet, assigneeChartSet);
 
-                // Исправлено CS8602: Проверка элемента UI на null
-                if (DashboardTicketsGrid != null)
-                    DashboardTicketsGrid.ItemsSource = _periodTickets;
-
-                LastUpdatedText = $"Обновлено: {DateTime.Now:HH:mm:ss}";
+                // Оставляем ToList(), так как ItemsSource имеет тип IEnumerable
+                DashboardTicketsGrid.ItemsSource = _periodTickets.OrderByDescending(t => t.CreatedAt).ToList();
             }
             catch (Exception ex)
             {
@@ -353,7 +385,7 @@ namespace КР_Ханников.Windows
             }
         }
 
-        private List<Ticket> ApplyFilters(
+        private static List<Ticket> ApplyFilters(
             List<Ticket> source,
             string status,
             string assignee,
@@ -382,7 +414,8 @@ namespace КР_Ханников.Windows
                     t.Assignee.User != null &&
                     t.Assignee.User.Username == assignee);
 
-            return query.ToList();
+            // IDE0305: Возвращаем List<Ticket> с помощью выражения коллекции
+            return [.. query];
         }
 
         private void CalculateKpi(List<Ticket> tickets)
@@ -391,7 +424,8 @@ namespace КР_Ханников.Windows
             int closed = tickets.Count(t => t.Status == Constants.TicketStatus.Closed);
             int open = tickets.Count(t => t.Status == Constants.TicketStatus.Open);
             int inProgress = tickets.Count(t => t.Status == Constants.TicketStatus.InProgress);
-            int overdue = tickets.Count(t => t.IsOverdue);
+
+            int overdue = tickets.Count(t => t.Status != Constants.TicketStatus.Closed && t.DueAt.HasValue && t.DueAt.Value < DateTime.UtcNow);
 
             KpiTotal = total;
             KpiOpen = open;
@@ -402,12 +436,12 @@ namespace КР_Ханников.Windows
             double percent = total == 0 ? 0 : (double)closed / total * 100.0;
             KpiResolvedPercentText = $"{percent:0.#}%";
 
-            var resolvedTimes = tickets
+            // IDE0305: Оптимизированная инициализация списка
+            List<double> resolvedTimes = [.. tickets
                 .Where(t => t.Status == Constants.TicketStatus.Closed && t.ClosedAt.HasValue)
-                .Select(t => (t.ClosedAt!.Value - t.CreatedAt).TotalHours)
-                .ToList();
+                .Select(t => (t.ClosedAt!.Value - t.CreatedAt).TotalHours)];
 
-            if (resolvedTimes.Any())
+            if (resolvedTimes.Count > 0)
             {
                 double avgHours = resolvedTimes.Average();
                 KpiAvgResolutionText = avgHours < 24
@@ -435,7 +469,10 @@ namespace КР_Ханников.Windows
                         : t.CreatedAt.Date)
                 .Select(g => new { Date = g.Key, Count = g.Count() });
 
-            if (SortDaysCombo?.SelectedIndex == 1)
+            int sortDaysIndex = 0;
+            Dispatcher.Invoke(() => { sortDaysIndex = SortDaysCombo.SelectedIndex; });
+
+            if (sortDaysIndex == 1)
                 grouped = grouped.OrderByDescending(x => x.Date);
             else
                 grouped = grouped.OrderBy(x => x.Date);
@@ -443,10 +480,11 @@ namespace КР_Ханников.Windows
             var groupedList = grouped.ToList();
 
             SeriesTicketsByDay.Clear();
-            if (groupedList.Any())
+
+            if (groupedList.Count > 0)
             {
                 var format = groupType == "Месяцы" ? "MMM yy" : "dd.MM";
-                LabelsDays = groupedList.Select(x => x.Date.ToString(format)).ToArray();
+                LabelsDays = [.. groupedList.Select(x => x.Date.ToString(format))];
 
                 SeriesTicketsByDay.Add(new ColumnSeries
                 {
@@ -457,7 +495,7 @@ namespace КР_Ханников.Windows
             }
             else
             {
-                LabelsDays = new[] { "-" };
+                LabelsDays = ["-"];
                 SeriesTicketsByDay.Add(new ColumnSeries
                 {
                     Values = new ChartValues<int> { 0 },
@@ -469,13 +507,18 @@ namespace КР_Ханников.Windows
                 .GroupBy(t => t.Category)
                 .Select(g => new { Name = g.Key.ToString(), Count = g.Count() });
 
-            if (CategorySortCombo?.SelectedIndex == 1)
+            int catSortIndex = 0;
+            Dispatcher.Invoke(() => { catSortIndex = CategorySortCombo.SelectedIndex; });
+
+            if (catSortIndex == 1)
                 catGroups = catGroups.OrderBy(x => x.Name);
             else
                 catGroups = catGroups.OrderByDescending(x => x.Count);
 
+            var catList = catGroups.ToList();
             SeriesCategories.Clear();
-            if (!catGroups.Any())
+
+            if (catList.Count == 0)
             {
                 SeriesCategories.Add(new PieSeries
                 {
@@ -487,7 +530,7 @@ namespace КР_Ханников.Windows
             }
             else
             {
-                foreach (var g in catGroups)
+                foreach (var g in catList)
                 {
                     SeriesCategories.Add(new PieSeries
                     {
@@ -507,13 +550,18 @@ namespace КР_Ханников.Windows
                     Val = (int)g.Key
                 });
 
-            if (PrioritySortCombo?.SelectedIndex == 1)
+            int prioSortIndex = 0;
+            Dispatcher.Invoke(() => { prioSortIndex = PrioritySortCombo.SelectedIndex; });
+
+            if (prioSortIndex == 1)
                 prioGroups = prioGroups.OrderByDescending(x => x.Val);
             else
                 prioGroups = prioGroups.OrderByDescending(x => x.Count);
 
+            var prioList = prioGroups.ToList();
             SeriesPriorities.Clear();
-            if (!prioGroups.Any())
+
+            if (prioList.Count == 0)
             {
                 SeriesPriorities.Add(new PieSeries
                 {
@@ -525,7 +573,7 @@ namespace КР_Ханников.Windows
             }
             else
             {
-                foreach (var g in prioGroups)
+                foreach (var g in prioList)
                 {
                     SeriesPriorities.Add(new PieSeries
                     {
@@ -540,21 +588,30 @@ namespace КР_Ханников.Windows
                 .GroupBy(t => t.Assignee?.User?.Username ?? "Не назначен")
                 .Select(g => new { Name = g.Key, Count = g.Count() });
 
-            if (AssigneeSortCombo?.SelectedIndex == 1)
+            int assignSortIndex = 0;
+            int topAssigneesIndex = 0;
+            Dispatcher.Invoke(() =>
+            {
+                assignSortIndex = AssigneeSortCombo.SelectedIndex;
+                topAssigneesIndex = TopAssigneesCombo.SelectedIndex;
+            });
+
+            if (assignSortIndex == 1)
                 assignGroups = assignGroups.OrderBy(x => x.Name);
             else
                 assignGroups = assignGroups.OrderByDescending(x => x.Count);
 
-            if (TopAssigneesCombo?.SelectedIndex == 1)
+            if (topAssigneesIndex == 1)
                 assignGroups = assignGroups.Take(5);
 
             var assignList = assignGroups.ToList();
-            LabelsAssignees = assignList.Select(x => x.Name).ToArray();
+            LabelsAssignees = [.. assignList.Select(x => x.Name)];
 
             SeriesByAssignee.Clear();
-            if (!assignList.Any())
+
+            if (assignList.Count == 0)
             {
-                LabelsAssignees = new[] { "Нет данных" };
+                LabelsAssignees = ["Нет данных"];
                 SeriesByAssignee.Add(new RowSeries
                 {
                     Values = new ChartValues<int> { 0 },
@@ -572,10 +629,8 @@ namespace КР_Ханников.Windows
             }
         }
 
-        private string GetComboText(ComboBox? box)
+        private static string GetComboText(ComboBox box)
         {
-            if (box == null) return string.Empty;
-
             if (box.SelectedItem is ComboBoxItem item)
                 return item.Content?.ToString() ?? string.Empty;
 
@@ -586,10 +641,9 @@ namespace КР_Ханников.Windows
         {
             try
             {
-                var tickets = DashboardTicketsGrid.ItemsSource as IEnumerable<Ticket>;
-                if (tickets == null || !tickets.Any())
+                if (DashboardTicketsGrid.ItemsSource is not ICollection<Ticket> tickets || tickets.Count == 0)
                 {
-                    MessageBox.Show("Нет данных для экспорта.");
+                    MessageBox.Show("Нет данных для экспорта.", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -606,9 +660,11 @@ namespace КР_Ханников.Windows
 
                     foreach (var t in tickets)
                     {
+                        string safeTitle = t.Title.Replace("\"", "\"\"").Replace("\n", " ").Replace("\r", "");
+
                         sb.AppendLine(
-                            $"{t.Id};\"{t.Title}\";{t.Status};{t.Category};{t.Priority};" +
-                            $"{t.Assignee?.User?.Username};{t.CreatedAt};{t.DueAt}");
+                            $"{t.Id};\"{safeTitle}\";{t.Status};{t.Category};{t.Priority};" +
+                            $"{t.Assignee?.User?.Username ?? "—"};{t.CreatedAt:yyyy-MM-dd HH:mm};{t.DueAt:yyyy-MM-dd HH:mm}");
                     }
 
                     File.WriteAllText(dlg.FileName, sb.ToString(), Encoding.UTF8);
@@ -616,17 +672,13 @@ namespace КР_Ханников.Windows
                     if (MessageBox.Show("CSV файл сохранен. Открыть?",
                             "Экспорт", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                     {
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = dlg.FileName,
-                            UseShellExecute = true
-                        });
+                        Process.Start(new ProcessStartInfo(dlg.FileName) { UseShellExecute = true });
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка",
+                MessageBox.Show($"Ошибка экспорта в CSV: {ex.Message}", "Ошибка",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -647,11 +699,7 @@ namespace КР_Ханников.Windows
                     MessageBox.Show("Отчет сохранен!", "Экспорт",
                         MessageBoxButton.OK, MessageBoxImage.Information);
 
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = dlg.FileName,
-                        UseShellExecute = true
-                    });
+                    Process.Start(new ProcessStartInfo(dlg.FileName) { UseShellExecute = true });
                 }
                 catch (Exception ex)
                 {
@@ -663,111 +711,133 @@ namespace КР_Ханников.Windows
 
         private void GeneratePdfReport(string filename)
         {
-            using var document = new PdfDocument();
-            document.Info.Title = "Analytics Report";
+            using var document = new PdfDocument { Info = { Title = "Analytics Report" } };
 
             var page = document.AddPage();
             var gfx = XGraphics.FromPdfPage(page);
 
-            var fontTitle = new XFont("Verdana", 20, XFontStyle.Bold);
-            var fontHeader = new XFont("Verdana", 12, XFontStyle.Bold);
+            var fontTitle = new XFont("Verdana", 16, XFontStyle.Bold);
+            var fontHeader = new XFont("Verdana", 11, XFontStyle.Bold);
             var fontNormal = new XFont("Verdana", 10, XFontStyle.Regular);
             var fontSmall = new XFont("Verdana", 8, XFontStyle.Regular);
 
-            gfx.DrawString("Отчет по аналитике", fontTitle, XBrushes.DarkBlue,
+            gfx.DrawString("Аналитический отчет по нагрузке и KPI техподдержки", fontTitle, XBrushes.DarkBlue,
                 new XRect(0, 20, page.Width, 40), XStringFormats.TopCenter);
 
-            gfx.DrawString($"Дата: {DateTime.Now:dd.MM.yyyy HH:mm}",
-                fontNormal, XBrushes.Black, 40, 60);
+            string periodStr = $"Период: {FromDatePicker.SelectedDate:dd.MM.yyyy} — {ToDatePicker.SelectedDate:dd.MM.yyyy}";
+            gfx.DrawString(periodStr, fontNormal, XBrushes.Black, 40, 60);
+            gfx.DrawString($"Сформировал: {CurrentUserName} ({CurrentUserRole})", fontNormal, XBrushes.Black, 40, 75);
+            gfx.DrawString($"Дата выгрузки: {DateTime.Now:dd.MM.yyyy HH:mm}", fontNormal, XBrushes.Gray, 40, 90);
 
-            gfx.DrawString($"Сотрудник: {CurrentUserName}",
-                fontNormal, XBrushes.Black, 40, 75);
+            double y = 130;
 
-            double y = 110;
+            DrawKpiBox(gfx, "Всего тикетов", KpiTotal.ToString(), 40, y);
+            DrawKpiBox(gfx, "В работе", KpiInProgress.ToString(), 130, y);
+            DrawKpiBox(gfx, "Закрыто", KpiClosed.ToString(), 220, y);
+            DrawKpiBox(gfx, "Просрочено", KpiOverdue.ToString(), 310, y, XBrushes.Red);
+            DrawKpiBox(gfx, "Решено (%)", KpiResolvedPercentText, 400, y);
+            DrawKpiBox(gfx, "Ср. время", KpiAvgResolutionText, 490, y, XBrushes.DarkGreen);
 
-            DrawKpiBox(gfx, "Всего", KpiTotal.ToString(), 40, y);
-            DrawKpiBox(gfx, "Открыто", KpiOpen.ToString(), 130, y);
-            DrawKpiBox(gfx, "В работе", KpiInProgress.ToString(), 220, y);
-            DrawKpiBox(gfx, "Закрыто", KpiClosed.ToString(), 310, y);
-            DrawKpiBox(gfx, "Просрочено", KpiOverdue.ToString(), 400, y, XBrushes.Red);
-            DrawKpiBox(gfx, "Ср. время", KpiAvgResolutionText, 490, y);
-
-            y += 60;
-            gfx.DrawLine(XPens.Gray, 40, y, page.Width - 40, y);
+            y += 50;
+            gfx.DrawLine(XPens.LightGray, 40, y, page.Width - 40, y);
             y += 20;
 
-            gfx.DrawString("Динамика:", fontHeader, XBrushes.Black, 40, y);
-            var imgDynamics = CaptureControl(ChartDynamics);
-            if (imgDynamics != null)
+            gfx.DrawString("Распределение нагрузки по сотрудникам:", fontHeader, XBrushes.Black, 40, y);
+
+            if (FindName("ChartAssignees") is UIElement chartAssigneesControl)
             {
-                gfx.DrawImage(imgDynamics, 40, y + 25, 500, 200);
-                y += 240;
-            }
-            else
-            {
-                y += 40;
+                var imgAssignees = CaptureControl(chartAssigneesControl);
+                if (imgAssignees != null)
+                {
+                    gfx.DrawImage(imgAssignees, 40, y + 20, 500, 180);
+                    y += 220;
+                }
             }
 
-            gfx.DrawString("Категории:", fontHeader, XBrushes.Black, 40, y);
-            var imgCats = CaptureControl(ChartCategories);
-            if (imgCats != null)
+            gfx.DrawString("Динамика поступления обращений:", fontHeader, XBrushes.Black, 40, y);
+
+            if (FindName("ChartDynamics") is UIElement chartDynamicsControl)
             {
-                gfx.DrawImage(imgCats, 40, y + 25, 250, 180);
+                var imgDynamics = CaptureControl(chartDynamicsControl);
+                if (imgDynamics != null)
+                {
+                    gfx.DrawImage(imgDynamics, 40, y + 20, 500, 180);
+                }
             }
 
-            var imgPrio = CaptureControl(ChartPriorities);
-            if (imgPrio != null)
+            page = document.AddPage();
+            gfx = XGraphics.FromPdfPage(page);
+            y = 40;
+
+            gfx.DrawString("Распределение по категориям:", fontHeader, XBrushes.Black, 40, y);
+
+            if (FindName("ChartCategories") is UIElement chartCatControl)
             {
-                gfx.DrawString("Приоритеты:", fontHeader, XBrushes.Black, 310, y);
-                gfx.DrawImage(imgPrio, 310, y + 25, 250, 180);
+                var imgCats = CaptureControl(chartCatControl);
+                if (imgCats != null) gfx.DrawImage(imgCats, 40, y + 20, 230, 160);
             }
 
-            y += 220;
+            if (FindName("ChartPriorities") is UIElement chartPrioControl)
+            {
+                var imgPrio = CaptureControl(chartPrioControl);
+                if (imgPrio != null)
+                {
+                    gfx.DrawString("Распределение по приоритетам:", fontHeader, XBrushes.Black, 310, y);
+                    gfx.DrawImage(imgPrio, 310, y + 20, 230, 160);
+                }
+            }
+
+            y += 200;
 
             if (_userSettings == null || _userSettings.ShowDetailedTable)
             {
-                page = document.AddPage();
-                gfx = XGraphics.FromPdfPage(page);
-                y = 40;
-
-                gfx.DrawString("Список тикетов (выборка):",
-                    fontHeader, XBrushes.Black, 40, y);
-
-                y += 30;
-
-                gfx.DrawString("#", fontHeader, XBrushes.Black, 40, y);
-                gfx.DrawString("Тема", fontHeader, XBrushes.Black, 80, y);
-                gfx.DrawString("Статус", fontHeader, XBrushes.Black, 300, y);
-                gfx.DrawString("Исполнитель", fontHeader, XBrushes.Black, 400, y);
-
-                y += 5;
-                gfx.DrawLine(XPens.Black, 40, y + 10, page.Width - 40, y + 10);
+                gfx.DrawString("Детализация заявок (выборка):", fontHeader, XBrushes.Black, 40, y);
                 y += 20;
 
-                var tickets = DashboardTicketsGrid.ItemsSource as IEnumerable<Ticket>;
-                if (tickets != null)
+                gfx.DrawRectangle(XBrushes.LightGray, 40, y - 12, page.Width - 80, 20);
+                gfx.DrawString("ID", fontHeader, XBrushes.Black, 45, y);
+                gfx.DrawString("Тема", fontHeader, XBrushes.Black, 80, y);
+                gfx.DrawString("Статус", fontHeader, XBrushes.Black, 280, y);
+                gfx.DrawString("Исполнитель", fontHeader, XBrushes.Black, 360, y);
+                gfx.DrawString("Создано", fontHeader, XBrushes.Black, 460, y);
+
+                y += 15;
+
+                if (DashboardTicketsGrid.ItemsSource is IEnumerable<Ticket> tickets)
                 {
                     foreach (var t in tickets)
                     {
-                        if (y > page.Height - 40)
+                        if (y > page.Height - 50)
                         {
                             page = document.AddPage();
                             gfx = XGraphics.FromPdfPage(page);
                             y = 40;
+
+                            gfx.DrawRectangle(XBrushes.LightGray, 40, y - 12, page.Width - 80, 20);
+                            gfx.DrawString("ID", fontHeader, XBrushes.Black, 45, y);
+                            gfx.DrawString("Тема", fontHeader, XBrushes.Black, 80, y);
+                            gfx.DrawString("Статус", fontHeader, XBrushes.Black, 280, y);
+                            gfx.DrawString("Исполнитель", fontHeader, XBrushes.Black, 360, y);
+                            gfx.DrawString("Создано", fontHeader, XBrushes.Black, 460, y);
+                            y += 15;
                         }
 
-                        gfx.DrawString(t.Id.ToString(), fontSmall, XBrushes.Black, 40, y);
+                        gfx.DrawString(t.Id.ToString(), fontSmall, XBrushes.Black, 45, y);
 
-                        string title = t.Title.Length > 40
-                            ? t.Title.Substring(0, 37) + "..."
+                        string title = t.Title.Length > 35
+                            ? string.Concat(t.Title.AsSpan(0, 32), "...")
                             : t.Title;
 
                         gfx.DrawString(title, fontSmall, XBrushes.Black, 80, y);
-                        gfx.DrawString(t.Status, fontSmall, XBrushes.Black, 300, y);
-                        gfx.DrawString(t.Assignee?.User?.Username ?? "—",
-                            fontSmall, XBrushes.Black, 400, y);
+
+                        var statusBrush = t.IsOverdue ? XBrushes.Red : (t.Status == Constants.TicketStatus.Closed ? XBrushes.DarkGreen : XBrushes.Black);
+                        gfx.DrawString(t.Status, fontSmall, statusBrush, 280, y);
+
+                        gfx.DrawString(t.Assignee?.User?.Username ?? "—", fontSmall, XBrushes.Black, 360, y);
+                        gfx.DrawString(t.CreatedAt.ToString("dd.MM.yy"), fontSmall, XBrushes.Black, 460, y);
 
                         y += 15;
+                        gfx.DrawLine(XPens.LightGray, 40, y - 10, page.Width - 40, y - 10);
                     }
                 }
             }
@@ -775,7 +845,7 @@ namespace КР_Ханников.Windows
             document.Save(filename);
         }
 
-        private XImage? CaptureControl(UIElement source)
+        private static XImage? CaptureControl(UIElement source)
         {
             try
             {
@@ -809,7 +879,7 @@ namespace КР_Ханников.Windows
             }
         }
 
-        private void DrawKpiBox(
+        private static void DrawKpiBox(
             XGraphics gfx,
             string label,
             string value,
@@ -826,28 +896,36 @@ namespace КР_Ханников.Windows
             gfx.DrawString(value, fontValue, valueBrush, x, y + 12);
         }
 
-        private void ApplyFilters_Click(object sender, RoutedEventArgs e) => LoadFromDb();
+        private void DashboardTicketsGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (DashboardTicketsGrid.SelectedItem is Ticket t)
+            {
+                var win = new TicketDetailsWindow(t.Id) { Owner = Window.GetWindow(this) };
+                if (win.ShowDialog() == true)
+                {
+                    _ = LoadFromDbAsync();
+                }
+            }
+        }
+
+        private void ApplyFilters_Click(object sender, RoutedEventArgs e) => _ = LoadFromDbAsync();
 
         private void ResetFilters_Click(object sender, RoutedEventArgs e)
         {
             InitializeFilters();
-            LoadFromDb();
+            _ = LoadFromDbAsync();
         }
 
         private void Quick7_Click(object sender, RoutedEventArgs e)
         {
-            if (FromDatePicker != null)
-                FromDatePicker.SelectedDate = DateTime.Now.AddDays(-7);
-
-            LoadFromDb();
+            FromDatePicker.SelectedDate = DateTime.Now.AddDays(-7);
+            _ = LoadFromDbAsync();
         }
 
         private void Quick30_Click(object sender, RoutedEventArgs e)
         {
-            if (FromDatePicker != null)
-                FromDatePicker.SelectedDate = DateTime.Now.AddDays(-30);
-
-            LoadFromDb();
+            FromDatePicker.SelectedDate = DateTime.Now.AddDays(-30);
+            _ = LoadFromDbAsync();
         }
 
         private void Filter_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -864,5 +942,30 @@ namespace КР_Ханников.Windows
 
         private void OnPropertyChanged([CallerMemberName] string? prop = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
+    }
+
+    public class EmployeePerformanceVm
+    {
+        public string Name { get; set; } = string.Empty;
+        public int ActiveTickets { get; set; }
+        public int WorkloadPoints { get; set; }
+        public double SlaPercentage { get; set; }
+        public double ArtHours { get; set; }
+
+        public string SlaText => $"{SlaPercentage:0.#}%";
+        public string ArtText => $"{ArtHours:0.#}";
+
+        public bool IsOverloaded => WorkloadPoints >= KpiService.MaxWorkloadPoints;
+        public bool IsWarning => WorkloadPoints >= (KpiService.MaxWorkloadPoints * 0.75) && WorkloadPoints < KpiService.MaxWorkloadPoints;
+
+        public string WorkloadStatus
+        {
+            get
+            {
+                if (IsOverloaded) return "Перегруз";
+                if (IsWarning) return "Плотная";
+                return "В норме";
+            }
+        }
     }
 }

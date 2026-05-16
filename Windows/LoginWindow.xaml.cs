@@ -18,7 +18,6 @@ namespace КР_Ханников.Windows
     {
         private readonly AppDbContext _context;
         private readonly AuthService _authService;
-        private static bool _mlInitStarted = false;
 
         public LoginWindow()
         {
@@ -106,28 +105,6 @@ namespace КР_Ханников.Windows
             }
         }
 
-        private void StartMlModelTrainingIfAdmin()
-        {
-            try
-            {
-                if (_mlInitStarted) return;
-                var currentUser = _authService.CurrentUser;
-                if (currentUser == null || currentUser.Role != Constants.UserRoles.Admin) return;
-
-                _mlInitStarted = true;
-                Task.Run(() =>
-                {
-                    try
-                    {
-                        using var trainingContext = App.CreateDbContext();
-                        TicketModelTrainer.TrainAndSaveModels(trainingContext);
-                    }
-                    catch (Exception innerEx) { Debug.WriteLine($"[ML] Error: {innerEx.Message}"); }
-                });
-            }
-            catch { _mlInitStarted = false; }
-        }
-
         private void Login_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -146,7 +123,6 @@ namespace КР_Ханников.Windows
                 {
                     SaveCredentials(username);
                     if (_authService.CurrentUser != null) ApplyUserTheme(_authService.CurrentUser.Id);
-                    StartMlModelTrainingIfAdmin();
 
                     var mainWindow = new MainWindow(_context, _authService);
                     mainWindow.Show();
@@ -167,15 +143,25 @@ namespace КР_Ханников.Windows
 
         private void ShowError(string message)
         {
-            if (ErrorText != null) ErrorText.Text = message;
-            if (ErrorPanel != null) ErrorPanel.Visibility = Visibility.Visible;
-            if (ErrorBorder != null) ErrorBorder.Visibility = Visibility.Visible;
+            try
+            {
+                string path = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "Текст_Ошибки.txt");
+                System.IO.File.WriteAllText(path, message);
+
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true
+                });
+            }
+            catch { }
+
+            MessageBox.Show("Я открыл Блокнот с текстом ошибки.\nПожалуйста, скопируйте текст оттуда и отправьте сюда!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
         private void HideError()
         {
-            if (ErrorPanel != null) ErrorPanel.Visibility = Visibility.Collapsed;
-            if (ErrorBorder != null) ErrorBorder.Visibility = Visibility.Collapsed;
+            // Метод оставлен пустым, чтобы не было ошибок компиляции
         }
 
         private void ApplyUserTheme(int userId)
@@ -194,7 +180,6 @@ namespace КР_Ханников.Windows
         {
             try
             {
-                // ИСПРАВЛЕНО: RegistrationWindow вместо RegisterWindow
                 var regWindow = new RegistrationWindow(_context)
                 {
                     Owner = this

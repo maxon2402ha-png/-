@@ -3,6 +3,7 @@ using Microsoft.Win32;
 using PdfSharpCore.Drawing;
 using PdfSharpCore.Pdf;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -66,7 +67,8 @@ namespace КР_Ханников.Windows
                 ClientComboBox.ItemsSource = clients;
                 ClientComboBox.DisplayMemberPath = "Name";
 
-                if (clients.Any())
+                // CA1860: Используем Count > 0 вместо Any()
+                if (clients.Count > 0)
                 {
                     ClientComboBox.SelectedIndex = 0;
                 }
@@ -92,7 +94,6 @@ namespace КР_Ханников.Windows
 
             try
             {
-                // Проверка на null для ClientTicketsGrid перед заполнением
                 if (ClientTicketsGrid == null) return;
 
                 var query = _context.Tickets
@@ -115,7 +116,7 @@ namespace КР_Ханников.Windows
                     query = query.Where(t => t.CreatedAt < to);
                 }
 
-                if (ClosedOnlyCheckBox.IsChecked == true)
+                if (ClosedOnlyCheckBox?.IsChecked == true)
                     query = query.Where(t => t.Status == Constants.TicketStatus.Closed);
 
                 var tickets = query
@@ -132,21 +133,23 @@ namespace КР_Ханников.Windows
             }
         }
 
-        private void UpdateStats(System.Collections.Generic.List<Ticket> tickets)
+        private void UpdateStats(List<Ticket> tickets)
         {
             int total = tickets.Count;
             int closed = tickets.Count(t => t.Status == Constants.TicketStatus.Closed);
             int inProgress = total - closed;
 
-            if (TotalCountText != null) TotalCountText.Text = total.ToString();
-            if (OpenCountText != null) OpenCountText.Text = inProgress.ToString();
-            if (ClosedCountText != null) ClosedCountText.Text = closed.ToString();
+            // IDE0031: Убраны избыточные проверки на null для элементов XAML
+            TotalCountText.Text = total.ToString();
+            OpenCountText.Text = inProgress.ToString();
+            ClosedCountText.Text = closed.ToString();
 
             var resolvedTickets = tickets
                 .Where(t => t.Status == Constants.TicketStatus.Closed && t.ClosedAt.HasValue)
                 .ToList();
 
-            if (resolvedTickets.Any() && AvgResolutionText != null)
+            // CA1860: Используем Count > 0 вместо Any()
+            if (resolvedTickets.Count > 0)
             {
                 double avgHours = resolvedTickets.Average(t => (t.ClosedAt!.Value - t.CreatedAt).TotalHours);
 
@@ -155,19 +158,20 @@ namespace КР_Ханников.Windows
                 else
                     AvgResolutionText.Text = $"{(avgHours / 24):0.#} дн";
             }
-            else if (AvgResolutionText != null)
+            else
             {
                 AvgResolutionText.Text = "—";
             }
 
             var ratedTickets = tickets.Where(t => t.Feedback != null).ToList();
 
-            if (ratedTickets.Any() && AvgRatingText != null)
+            // CA1860: Используем Count > 0 вместо Any()
+            if (ratedTickets.Count > 0)
             {
                 double avgRating = ratedTickets.Average(t => t.Feedback!.Rating);
                 AvgRatingText.Text = $"{avgRating:0.0} / 5";
             }
-            else if (AvgRatingText != null)
+            else
             {
                 AvgRatingText.Text = "—";
             }
@@ -176,8 +180,8 @@ namespace КР_Ханников.Windows
         // ===== ЭКСПОРТ CSV =====
         private void ExportClientCsvButton_Click(object sender, RoutedEventArgs e)
         {
-            var tickets = ClientTicketsGrid.ItemsSource as System.Collections.Generic.IEnumerable<Ticket>;
-            if (tickets == null || !tickets.Any())
+            // IDE0019 и CA1860: Сопоставление шаблонов (is not) и проверка на 0
+            if (ClientTicketsGrid.ItemsSource is not ICollection<Ticket> tickets || tickets.Count == 0)
             {
                 MessageBox.Show("Нет данных.");
                 return;
@@ -225,8 +229,8 @@ namespace КР_Ханников.Windows
         // ===== ЭКСПОРТ PDF =====
         private void ExportClientPdfButton_Click(object sender, RoutedEventArgs e)
         {
-            var tickets = ClientTicketsGrid.ItemsSource as System.Collections.Generic.IEnumerable<Ticket>;
-            if (tickets == null || !tickets.Any())
+            // IDE0019 и CA1860: Сопоставление шаблонов (is not) и проверка на 0
+            if (ClientTicketsGrid.ItemsSource is not ICollection<Ticket> tickets || tickets.Count == 0)
             {
                 MessageBox.Show("Нет данных.");
                 return;
@@ -276,9 +280,11 @@ namespace КР_Ханников.Windows
 
                         gfx.DrawString(t.Id.ToString(), fontRow, XBrushes.Black, 40, y);
 
+                        // CA1845 и IDE0057: Использование AsSpan и string.Concat вместо создания новых строк
                         string title = t.Title.Length > 35
-                            ? t.Title.Substring(0, 32) + "..."
+                            ? string.Concat(t.Title.AsSpan(0, 32), "...")
                             : t.Title;
+
                         gfx.DrawString(title, fontRow, XBrushes.Black, 80, y);
 
                         gfx.DrawString(t.Status, fontRow, XBrushes.Black, 300, y);
@@ -309,8 +315,8 @@ namespace КР_Ханников.Windows
 
         private void Close_Click(object sender, RoutedEventArgs e)
         {
-            var window = Window.GetWindow(this) as MainWindow;
-            if (window != null)
+            // IDE0019: Сопоставление шаблонов
+            if (Window.GetWindow(this) is MainWindow window)
             {
                 window.OpenTickets_Click(sender, e);
             }

@@ -6,7 +6,7 @@ using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
+using System.Windows.Threading;
 using КР_Ханников.Core;
 using КР_Ханников.Data;
 using КР_Ханников.Services;
@@ -19,6 +19,7 @@ namespace КР_Ханников.Windows
         private readonly AppDbContext _context;
         private readonly AuthService _authService;
         private List<KnowledgeArticle> _allArticles = new();
+        private DispatcherTimer _searchTimer;
 
         public KnowledgeBaseControl(AppDbContext context, AuthService authService)
         {
@@ -26,6 +27,10 @@ namespace КР_Ханников.Windows
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
             DataContext = this;
+
+            // Таймер для отложенного поиска (чтобы база не тормозила при быстром наборе текста)
+            _searchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+            _searchTimer.Tick += SearchTimer_Tick;
 
             ConfigureAccess();
             _ = LoadArticlesAsync();
@@ -35,10 +40,11 @@ namespace КР_Ханников.Windows
 
         private void ConfigureAccess()
         {
-            // Ограничиваем только Клиентам (Саппорт и Админ могут видеть кнопки)
+            // Ограничиваем возможности редактирования для обычных клиентов
             if (_authService.CurrentUser?.Role == Constants.UserRoles.Client)
             {
                 if (AddArticleButton != null) AddArticleButton.Visibility = Visibility.Collapsed;
+                if (ReaderActionButtons != null) ReaderActionButtons.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -46,26 +52,48 @@ namespace КР_Ханников.Windows
         {
             try
             {
-                _allArticles = await _context.KnowledgeBase.AsNoTracking().ToListAsync();
+                // ИСПРАВЛЕНИЕ: Используем локальный контекст для предотвращения конфликтов в многопоточности
+                using var db = App.CreateDbContext();
+
+                _allArticles = await db.KnowledgeBase
+                    .AsNoTracking()
+                    .OrderByDescending(a => a.UpdatedAt)
+                    .ToListAsync();
+
                 UpdateGridSource(_allArticles);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка загрузки статей: {ex.Message}");
+                MessageBox.Show($"Ошибка загрузки статей: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void UpdateGridSource(IEnumerable<KnowledgeArticle> articles)
         {
-            if (ArticlesGrid == null) return;
+            if (ArticlesList == null) return;
             var list = articles.ToList();
-            ArticlesGrid.ItemsSource = list;
+
+            ArticlesList.ItemsSource = list;
             if (ArticleCountText != null) ArticleCountText.Text = list.Count.ToString();
-            if (EmptyState != null) EmptyState.Visibility = list.Any() ? Visibility.Collapsed : Visibility.Visible;
+
+            // Если после обновления/поиска выбранной статьи больше нет в списке, сбрасываем вид
+            if (ArticlesList.SelectedItem == null)
+            {
+                ShowEmptyState();
+            }
         }
 
         private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
         {
+            // Сбрасываем таймер при каждом новом нажатии
+            _searchTimer.Stop();
+            _searchTimer.Start();
+        }
+
+        private void SearchTimer_Tick(object? sender, EventArgs e)
+        {
+            _searchTimer.Stop();
+
             var query = SearchBox.Text?.Trim().ToLower() ?? "";
 
             if (string.IsNullOrWhiteSpace(query))
@@ -82,6 +110,33 @@ namespace КР_Ханников.Windows
             }
         }
 
+        // --- ЛОГИКА ОТОБРАЖЕНИЯ СТАТЬИ (SPLIT-VIEW) ---
+        private void ArticlesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (ArticlesList.SelectedItem is KnowledgeArticle article)
+            {
+                // Заполняем правую панель
+                ReaderTitle.Text = article.Title;
+                ReaderDate.Text = $"Последнее обновление: {article.UpdatedAt:dd.MM.yyyy HH:mm}";
+                ReaderContent.Text = article.Content;
+
+                // Переключаем видимость панелей
+                ReaderPanel.Visibility = Visibility.Visible;
+                NoSelectionPanel.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                ShowEmptyState();
+            }
+        }
+
+        private void ShowEmptyState()
+        {
+            if (ReaderPanel != null) ReaderPanel.Visibility = Visibility.Collapsed;
+            if (NoSelectionPanel != null) NoSelectionPanel.Visibility = Visibility.Visible;
+        }
+
+        // --- CRUD ОПЕРАЦИИ ---
         private async void AddArticle_Click(object sender, RoutedEventArgs e)
         {
             var editor = new ArticleEditorWindow { Owner = Window.GetWindow(this) };
@@ -89,6 +144,7 @@ namespace КР_Ханников.Windows
             {
                 try
                 {
+                    using var db = App.CreateDbContext();
                     var article = new KnowledgeArticle
                     {
                         Title = editor.ArticleTitle,
@@ -97,9 +153,13 @@ namespace КР_Ханников.Windows
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     };
-                    _context.KnowledgeBase.Add(article);
-                    await _context.SaveChangesAsync();
+
+                    db.KnowledgeBase.Add(article);
+                    await db.SaveChangesAsync();
+
+                    // Перезагружаем и автоматически выделяем новую статью
                     await LoadArticlesAsync();
+                    ArticlesList.SelectedItem = _allArticles.FirstOrDefault(a => a.Title == article.Title);
                 }
                 catch (Exception ex)
                 {
@@ -110,73 +170,70 @@ namespace КР_Ханников.Windows
 
         private async void EditArticle_Click(object sender, RoutedEventArgs e)
         {
-            if (_authService.CurrentUser?.Role == Constants.UserRoles.Client)
-            {
-                MessageBox.Show("Нет прав."); return;
-            }
+            // Берем статью из выбранного элемента списка
+            if (ArticlesList.SelectedItem is not KnowledgeArticle article) return;
 
-            if (sender is FrameworkElement element && element.DataContext is KnowledgeArticle article)
+            var editor = new ArticleEditorWindow(article) { Owner = Window.GetWindow(this) };
+            if (editor.ShowDialog() == true)
             {
-                // Используем ArticleEditorWindow для редактирования
-                var editor = new ArticleEditorWindow(article) { Owner = Window.GetWindow(this) };
-                if (editor.ShowDialog() == true)
+                try
                 {
-                    try
+                    using var db = App.CreateDbContext();
+                    var item = await db.KnowledgeBase.FirstOrDefaultAsync(k => k.Id == article.Id);
+
+                    if (item != null)
                     {
-                        var item = _context.KnowledgeBase.FirstOrDefault(k => k.Id == article.Id);
-                        if (item != null)
-                        {
-                            item.Title = editor.ArticleTitle;
-                            item.Content = editor.ArticleContent;
-                            item.UpdatedAt = DateTime.UtcNow;
-                            await _context.SaveChangesAsync();
-                            await LoadArticlesAsync();
-                        }
+                        item.Title = editor.ArticleTitle;
+                        item.Content = editor.ArticleContent;
+                        item.UpdatedAt = DateTime.UtcNow;
+
+                        await db.SaveChangesAsync();
+                        await LoadArticlesAsync();
+
+                        // Возвращаем фокус на отредактированную статью
+                        ArticlesList.SelectedItem = _allArticles.FirstOrDefault(a => a.Id == article.Id);
                     }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Ошибка обновления: {ex.Message}");
-                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка обновления: {ex.Message}");
                 }
             }
         }
 
         private async void DeleteArticle_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is FrameworkElement element && element.DataContext is KnowledgeArticle article)
+            if (ArticlesList.SelectedItem is not KnowledgeArticle article) return;
+
+            if (MessageBox.Show($"Вы уверены, что хотите удалить статью \"{article.Title}\"?", "Удаление", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
-                if (MessageBox.Show($"Удалить \"{article.Title}\"?", "Подтверждение", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                try
                 {
-                    try
+                    using var db = App.CreateDbContext();
+                    var item = await db.KnowledgeBase.FirstOrDefaultAsync(k => k.Id == article.Id);
+
+                    if (item != null)
                     {
-                        var item = _context.KnowledgeBase.FirstOrDefault(k => k.Id == article.Id);
-                        if (item != null)
+                        db.KnowledgeBase.Remove(item);
+
+        
+                        db.AuditLogs.Add(new AuditLog
                         {
-                            _context.KnowledgeBase.Remove(item);
-                            await _context.SaveChangesAsync();
-                            await LoadArticlesAsync();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Ошибка: {ex.Message}");
+                            Username = _authService.CurrentUser?.Username ?? "Система",
+                            Action = "Удаление статьи",
+                            Details = $"Удалена статья: {item.Title}",
+                            Timestamp = DateTime.UtcNow
+                        });
+
+                        await db.SaveChangesAsync();
+                        await LoadArticlesAsync();
+                        ShowEmptyState(); // Очищаем экран чтения
                     }
                 }
-            }
-        }
-
-        private async void Refresh_Click(object sender, RoutedEventArgs e)
-        {
-            if (SearchBox != null) SearchBox.Text = string.Empty;
-            await LoadArticlesAsync();
-        }
-
-        private void ArticlesGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            if (ArticlesGrid?.SelectedItem is KnowledgeArticle article)
-            {
-                // Открываем окно просмотра (ArticleDetailsWindow)
-                new ArticleDetailsWindow(article) { Owner = Window.GetWindow(this) }.ShowDialog();
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка удаления: {ex.Message}");
+                }
             }
         }
     }

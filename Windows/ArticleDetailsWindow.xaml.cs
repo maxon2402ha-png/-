@@ -1,5 +1,6 @@
 ﻿using System.Runtime.Versioning;
 using System.Windows;
+using System.Windows.Input;
 using КР_Ханников.Core;
 using КР_Ханников.Data;
 
@@ -12,6 +13,15 @@ namespace КР_Ханников.Windows
         {
             InitializeComponent();
             DataContext = article;
+        }
+
+        // Позволяет перетаскивать окно без системных рамок
+        private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Left)
+            {
+                this.DragMove();
+            }
         }
 
         private void Close_Click(object sender, RoutedEventArgs e)

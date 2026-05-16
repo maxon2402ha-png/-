@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Markup;
 using System.Runtime.Versioning;
@@ -19,18 +20,16 @@ namespace КР_Ханников
     {
         public App()
         {
-            // Лечение ошибок даты в Postgres
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
         }
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            // Настройка культуры
             var culture = new CultureInfo("ru-RU");
             Thread.CurrentThread.CurrentCulture = culture;
             Thread.CurrentThread.CurrentUICulture = culture;
-
-            FrameworkElement.LanguageProperty.OverrideMetadata(
-                typeof(FrameworkElement),
+            FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement),
                 new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(culture.IetfLanguageTag)));
 
             base.OnStartup(e);
@@ -38,25 +37,44 @@ namespace КР_Ханников
 
             try
             {
+                // 1. Подключаемся к базе в основном потоке
                 using (var context = CreateDbContext())
                 {
-                    // 1. Применяем миграции
-                    context.Database.Migrate();
+                    // Создаем базу, если ее еще нет
+                    context.Database.EnsureCreated();
 
-                    // 2. Обновляем или создаем админа
+                    // Создаем или обновляем администратора
                     EnsureAdminExists(context);
+
+                    // ЗАПОЛНЕНИЕ ТЕСТОВЫМИ ДАННЫМИ
+                    DbSeeder.SeedAsync(context).Wait();
                 }
 
-                // 3. Запускаем окно входа
+                // === 2. ЗАПУСКАЕМ ОБУЧЕНИЕ ИИ В ФОНОВОМ ПОТОКЕ ===
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        using var mlContext = CreateDbContext();
+                        var classifier = new MlTicketClassifier();
+                        classifier.TrainModels(mlContext);
+                        Debug.WriteLine("[ML] Модель успешно обучена на исторических данных!");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[ML Error] Ошибка обучения: {ex.Message}");
+                    }
+                });
+
+                // 3. Открываем окно входа
                 var loginContext = CreateDbContext();
-                var authService = new Services.AuthService(loginContext);
+                var authService = new AuthService(loginContext);
                 var loginWindow = new LoginWindow(loginContext, authService);
                 loginWindow.Show();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Критическая ошибка запуска:\n{ex.Message}\n\n{ex.InnerException?.Message}",
-                    "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Ошибка запуска:\n{ex.Message}", "Критическая ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 Shutdown();
             }
         }
@@ -65,69 +83,72 @@ namespace КР_Ханников
         {
             try
             {
-                // Ищем пользователя с логином 'admin'
-                var adminUser = context.Users.FirstOrDefault(u => u.Username == "admin");
+                string adminUsername = "admin";
+                string defaultPassword = "admin123";
 
-                // Хеш пароля "admin123"
-                // Используем стандартный хеш, чтобы подходил под любую реализацию проверки
-                string newHash = BCrypt.Net.BCrypt.HashPassword("admin123");
+                var adminUser = context.Users.FirstOrDefault(u => u.Username == adminUsername);
 
                 if (adminUser != null)
                 {
-                    // === СЦЕНАРИЙ ОБНОВЛЕНИЯ (если админ уже был) ===
-                    Debug.WriteLine("Админ найден. Сброс пароля...");
-                    adminUser.PasswordHash = newHash;
-                    adminUser.Role = "Admin"; // На всякий случай возвращаем права
+                    // Используем Enhanced-методы, как в AuthService
+                    if (!BCrypt.Net.BCrypt.EnhancedVerify(defaultPassword, adminUser.PasswordHash))
+                    {
+                        adminUser.PasswordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(defaultPassword, 13);
+                    }
 
-                    // Проверяем, есть ли запись сотрудника
+                    adminUser.Role = Constants.UserRoles.Admin;
+
                     var emp = context.Employees.FirstOrDefault(e => e.UserId == adminUser.Id);
                     if (emp == null)
                     {
                         context.Employees.Add(new Employee
                         {
-                            Name = "Administrator",
+                            Name = "Главный Администратор",
                             UserId = adminUser.Id,
-                            Role = "Admin",
+                            Role = Constants.UserRoles.Admin,
                             MaxActiveTickets = 999
                         });
+                    }
+                    else
+                    {
+                        emp.Role = Constants.UserRoles.Admin;
                     }
                 }
                 else
                 {
-                    // === СЦЕНАРИЙ СОЗДАНИЯ (если админа не было) ===
-                    Debug.WriteLine("Админ не найден. Создание нового...");
                     var newAdmin = new User
                     {
-                        Username = "admin",
-                        PasswordHash = newHash,
-                        Role = "Admin",
+                        Username = adminUsername,
+                        PasswordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(defaultPassword, 13),
+                        Role = Constants.UserRoles.Admin,
                         IsEmailVerified = true,
-                        CreatedAt = DateTime.Now
+                        CreatedAt = DateTime.UtcNow
                     };
+
                     context.Users.Add(newAdmin);
-                    context.SaveChanges(); 
+                    context.SaveChanges();
 
                     context.Employees.Add(new Employee
                     {
-                        Name = "Administrator",
+                        Name = "Главный Администратор",
                         UserId = newAdmin.Id,
-                        Role = "Admin",
+                        Role = Constants.UserRoles.Admin,
                         MaxActiveTickets = 999
                     });
                 }
 
                 context.SaveChanges();
-                // MessageBox.Show("Администратор готов!\nЛогин: admin\nПароль: admin123", "Инфо");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка настройки админа: {ex.Message}");
+                Debug.WriteLine($"[Admin Check Error] {ex.Message}");
             }
         }
 
         private void App_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
         {
-            MessageBox.Show($"Ошибка в приложении:\n{e.Exception.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"В приложении произошла ошибка:\n{e.Exception.Message}",
+                "Критическая ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             e.Handled = true;
         }
 

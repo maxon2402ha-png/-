@@ -44,7 +44,10 @@ namespace КР_Ханников.Core
             // === НАСТРОЙКИ СЕРВЕРА ===
             private const string Host = "localhost";
             private const string Port = "5432";
-            private const string DbName = "TicketSystemDb";
+
+            // ИСПРАВЛЕНИЕ: Изменили имя БД на _v2, чтобы создать новую чистую базу со всеми колонками
+            private const string DbName = "TicketSystemDb"; // Новое имя
+
             private const string User = "postgres";
 
             // !!! ВНИМАНИЕ: Впиши сюда свой пароль, который вводил в pgAdmin !!!
