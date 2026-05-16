@@ -67,8 +67,7 @@ namespace КР_Ханников.Windows
                 ClientComboBox.ItemsSource = clients;
                 ClientComboBox.DisplayMemberPath = "Name";
 
-                // CA1860: Используем Count > 0 вместо Any()
-                if (clients.Count > 0)
+                                if (clients.Count > 0)
                 {
                     ClientComboBox.SelectedIndex = 0;
                 }
@@ -139,8 +138,7 @@ namespace КР_Ханников.Windows
             int closed = tickets.Count(t => t.Status == Constants.TicketStatus.Closed);
             int inProgress = total - closed;
 
-            // IDE0031: Убраны избыточные проверки на null для элементов XAML
-            TotalCountText.Text = total.ToString();
+                        TotalCountText.Text = total.ToString();
             OpenCountText.Text = inProgress.ToString();
             ClosedCountText.Text = closed.ToString();
 
@@ -148,8 +146,7 @@ namespace КР_Ханников.Windows
                 .Where(t => t.Status == Constants.TicketStatus.Closed && t.ClosedAt.HasValue)
                 .ToList();
 
-            // CA1860: Используем Count > 0 вместо Any()
-            if (resolvedTickets.Count > 0)
+                        if (resolvedTickets.Count > 0)
             {
                 double avgHours = resolvedTickets.Average(t => (t.ClosedAt!.Value - t.CreatedAt).TotalHours);
 
@@ -165,8 +162,7 @@ namespace КР_Ханников.Windows
 
             var ratedTickets = tickets.Where(t => t.Feedback != null).ToList();
 
-            // CA1860: Используем Count > 0 вместо Any()
-            if (ratedTickets.Count > 0)
+                        if (ratedTickets.Count > 0)
             {
                 double avgRating = ratedTickets.Average(t => t.Feedback!.Rating);
                 AvgRatingText.Text = $"{avgRating:0.0} / 5";
@@ -177,11 +173,9 @@ namespace КР_Ханников.Windows
             }
         }
 
-        // ===== ЭКСПОРТ CSV =====
-        private void ExportClientCsvButton_Click(object sender, RoutedEventArgs e)
+                private void ExportClientCsvButton_Click(object sender, RoutedEventArgs e)
         {
-            // IDE0019 и CA1860: Сопоставление шаблонов (is not) и проверка на 0
-            if (ClientTicketsGrid.ItemsSource is not ICollection<Ticket> tickets || tickets.Count == 0)
+                        if (ClientTicketsGrid.ItemsSource is not ICollection<Ticket> tickets || tickets.Count == 0)
             {
                 MessageBox.Show("Нет данных.");
                 return;
@@ -226,11 +220,9 @@ namespace КР_Ханников.Windows
             }
         }
 
-        // ===== ЭКСПОРТ PDF =====
-        private void ExportClientPdfButton_Click(object sender, RoutedEventArgs e)
+                private void ExportClientPdfButton_Click(object sender, RoutedEventArgs e)
         {
-            // IDE0019 и CA1860: Сопоставление шаблонов (is not) и проверка на 0
-            if (ClientTicketsGrid.ItemsSource is not ICollection<Ticket> tickets || tickets.Count == 0)
+                        if (ClientTicketsGrid.ItemsSource is not ICollection<Ticket> tickets || tickets.Count == 0)
             {
                 MessageBox.Show("Нет данных.");
                 return;
@@ -280,8 +272,7 @@ namespace КР_Ханников.Windows
 
                         gfx.DrawString(t.Id.ToString(), fontRow, XBrushes.Black, 40, y);
 
-                        // CA1845 и IDE0057: Использование AsSpan и string.Concat вместо создания новых строк
-                        string title = t.Title.Length > 35
+                                                string title = t.Title.Length > 35
                             ? string.Concat(t.Title.AsSpan(0, 32), "...")
                             : t.Title;
 
@@ -315,8 +306,7 @@ namespace КР_Ханников.Windows
 
         private void Close_Click(object sender, RoutedEventArgs e)
         {
-            // IDE0019: Сопоставление шаблонов
-            if (Window.GetWindow(this) is MainWindow window)
+                        if (Window.GetWindow(this) is MainWindow window)
             {
                 window.OpenTickets_Click(sender, e);
             }

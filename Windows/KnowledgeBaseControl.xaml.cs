@@ -28,8 +28,7 @@ namespace КР_Ханников.Windows
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
             DataContext = this;
 
-            // Таймер для отложенного поиска (чтобы база не тормозила при быстром наборе текста)
-            _searchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+                        _searchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
             _searchTimer.Tick += SearchTimer_Tick;
 
             ConfigureAccess();
@@ -40,8 +39,7 @@ namespace КР_Ханников.Windows
 
         private void ConfigureAccess()
         {
-            // Ограничиваем возможности редактирования для обычных клиентов
-            if (_authService.CurrentUser?.Role == Constants.UserRoles.Client)
+                        if (_authService.CurrentUser?.Role == Constants.UserRoles.Client)
             {
                 if (AddArticleButton != null) AddArticleButton.Visibility = Visibility.Collapsed;
                 if (ReaderActionButtons != null) ReaderActionButtons.Visibility = Visibility.Collapsed;
@@ -52,8 +50,7 @@ namespace КР_Ханников.Windows
         {
             try
             {
-                // ИСПРАВЛЕНИЕ: Используем локальный контекст для предотвращения конфликтов в многопоточности
-                using var db = App.CreateDbContext();
+                                using var db = App.CreateDbContext();
 
                 _allArticles = await db.KnowledgeBase
                     .AsNoTracking()
@@ -76,8 +73,7 @@ namespace КР_Ханников.Windows
             ArticlesList.ItemsSource = list;
             if (ArticleCountText != null) ArticleCountText.Text = list.Count.ToString();
 
-            // Если после обновления/поиска выбранной статьи больше нет в списке, сбрасываем вид
-            if (ArticlesList.SelectedItem == null)
+                        if (ArticlesList.SelectedItem == null)
             {
                 ShowEmptyState();
             }
@@ -85,8 +81,7 @@ namespace КР_Ханников.Windows
 
         private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            // Сбрасываем таймер при каждом новом нажатии
-            _searchTimer.Stop();
+                        _searchTimer.Stop();
             _searchTimer.Start();
         }
 
@@ -110,18 +105,15 @@ namespace КР_Ханников.Windows
             }
         }
 
-        // --- ЛОГИКА ОТОБРАЖЕНИЯ СТАТЬИ (SPLIT-VIEW) ---
-        private void ArticlesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+                private void ArticlesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (ArticlesList.SelectedItem is KnowledgeArticle article)
             {
-                // Заполняем правую панель
-                ReaderTitle.Text = article.Title;
+                                ReaderTitle.Text = article.Title;
                 ReaderDate.Text = $"Последнее обновление: {article.UpdatedAt:dd.MM.yyyy HH:mm}";
                 ReaderContent.Text = article.Content;
 
-                // Переключаем видимость панелей
-                ReaderPanel.Visibility = Visibility.Visible;
+                                ReaderPanel.Visibility = Visibility.Visible;
                 NoSelectionPanel.Visibility = Visibility.Collapsed;
             }
             else
@@ -136,8 +128,7 @@ namespace КР_Ханников.Windows
             if (NoSelectionPanel != null) NoSelectionPanel.Visibility = Visibility.Visible;
         }
 
-        // --- CRUD ОПЕРАЦИИ ---
-        private async void AddArticle_Click(object sender, RoutedEventArgs e)
+                private async void AddArticle_Click(object sender, RoutedEventArgs e)
         {
             var editor = new ArticleEditorWindow { Owner = Window.GetWindow(this) };
             if (editor.ShowDialog() == true)
@@ -157,8 +148,7 @@ namespace КР_Ханников.Windows
                     db.KnowledgeBase.Add(article);
                     await db.SaveChangesAsync();
 
-                    // Перезагружаем и автоматически выделяем новую статью
-                    await LoadArticlesAsync();
+                                        await LoadArticlesAsync();
                     ArticlesList.SelectedItem = _allArticles.FirstOrDefault(a => a.Title == article.Title);
                 }
                 catch (Exception ex)
@@ -170,8 +160,7 @@ namespace КР_Ханников.Windows
 
         private async void EditArticle_Click(object sender, RoutedEventArgs e)
         {
-            // Берем статью из выбранного элемента списка
-            if (ArticlesList.SelectedItem is not KnowledgeArticle article) return;
+                        if (ArticlesList.SelectedItem is not KnowledgeArticle article) return;
 
             var editor = new ArticleEditorWindow(article) { Owner = Window.GetWindow(this) };
             if (editor.ShowDialog() == true)
@@ -190,8 +179,7 @@ namespace КР_Ханников.Windows
                         await db.SaveChangesAsync();
                         await LoadArticlesAsync();
 
-                        // Возвращаем фокус на отредактированную статью
-                        ArticlesList.SelectedItem = _allArticles.FirstOrDefault(a => a.Id == article.Id);
+                                                ArticlesList.SelectedItem = _allArticles.FirstOrDefault(a => a.Id == article.Id);
                     }
                 }
                 catch (Exception ex)
@@ -227,8 +215,7 @@ namespace КР_Ханников.Windows
 
                         await db.SaveChangesAsync();
                         await LoadArticlesAsync();
-                        ShowEmptyState(); // Очищаем экран чтения
-                    }
+                        ShowEmptyState();                     }
                 }
                 catch (Exception ex)
                 {

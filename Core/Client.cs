@@ -12,7 +12,6 @@ namespace КР_Ханников.Core
         [Required]
         public string Name { get; set; } = string.Empty;
 
-        // Отключаем поиск этих колонок в базе данных
         [NotMapped]
         public string Email { get; set; } = string.Empty;
 

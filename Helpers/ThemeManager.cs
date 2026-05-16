@@ -14,20 +14,12 @@ namespace КР_Ханников.Helpers
 
             if (isDark)
             {
-                // ТЕМНАЯ ТЕМА
-                dict["Brush.Background"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#111827")); // Темный фон
-                dict["Brush.Surface"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1F2937"));    // Чуть светлее
-                dict["Brush.SurfaceAlt"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#374151")); // Еще светлее
-
-                dict["Brush.TextPrimary"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F9FAFB")); // Белый текст
-                dict["Brush.TextSecondary"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#9CA3AF")); // Серый текст
-
-                dict["Brush.Border"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#374151"));     // Границы
-            }
+                                dict["Brush.Background"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#111827"));                 dict["Brush.Surface"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1F2937"));                    dict["Brush.SurfaceAlt"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#374151")); 
+                dict["Brush.TextPrimary"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F9FAFB"));                 dict["Brush.TextSecondary"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#9CA3AF")); 
+                dict["Brush.Border"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#374151"));                 }
             else
             {
-                // СВЕТЛАЯ ТЕМА
-                dict["Brush.Background"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F3F4F6"));
+                                dict["Brush.Background"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F3F4F6"));
                 dict["Brush.Surface"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFFFFF"));
                 dict["Brush.SurfaceAlt"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F9FAFB"));
 
@@ -37,8 +29,7 @@ namespace КР_Ханников.Helpers
                 dict["Brush.Border"] = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E5E7EB"));
             }
 
-            // Обновляем алиасы, чтобы старый код тоже заработал
-            dict["Brush.TextMain"] = dict["Brush.TextPrimary"];
+                        dict["Brush.TextMain"] = dict["Brush.TextPrimary"];
             dict["Brush.TextLight"] = dict["Brush.TextSecondary"];
         }
     }

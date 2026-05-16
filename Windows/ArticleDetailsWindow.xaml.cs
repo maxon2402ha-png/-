@@ -15,8 +15,7 @@ namespace КР_Ханников.Windows
             DataContext = article;
         }
 
-        // Позволяет перетаскивать окно без системных рамок
-        private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+                private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ChangedButton == MouseButton.Left)
             {

@@ -35,51 +35,42 @@ namespace КР_Ханников.Windows
                 using var db = App.CreateDbContext();
                 var kpiService = new KpiService(db);
 
-                // Получаем ID сотрудника
-                var employee = await db.Employees.AsNoTracking().FirstOrDefaultAsync(e => e.UserId == user.Id);
+                                var employee = await db.Employees.AsNoTracking().FirstOrDefaultAsync(e => e.UserId == user.Id);
                 if (employee == null) return;
 
                 GreetingText.Text = $"Привет, {employee.Name.Split(' ')[0]}!";
 
-                // 1. Вычисляем индекс нагрузки (Workload Index)
-                int currentLoad = await kpiService.CalculateEmployeeWorkloadAsync(employee.Id);
+                                int currentLoad = await kpiService.CalculateEmployeeWorkloadAsync(employee.Id);
                 WorkloadProgress.Value = currentLoad;
                 WorkloadPointsText.Text = $"{currentLoad} / {KpiService.MaxWorkloadPoints} баллов";
 
-                // Динамическая раскраска индикатора нагрузки
-                if (currentLoad < 10)
+                                if (currentLoad < 10)
                 {
-                    WorkloadProgress.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#10B981")); // Зеленый
-                    WorkloadStatusText.Text = "Оптимальная нагрузка";
+                    WorkloadProgress.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#10B981"));                     WorkloadStatusText.Text = "Оптимальная нагрузка";
                     WorkloadStatusText.Foreground = WorkloadProgress.Foreground;
                 }
                 else if (currentLoad < 16)
                 {
-                    WorkloadProgress.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F59E0B")); // Желтый
-                    WorkloadStatusText.Text = "Повышенная нагрузка";
+                    WorkloadProgress.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F59E0B"));                     WorkloadStatusText.Text = "Повышенная нагрузка";
                     WorkloadStatusText.Foreground = WorkloadProgress.Foreground;
                 }
                 else
                 {
-                    WorkloadProgress.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EF4444")); // Красный
-                    WorkloadStatusText.Text = "Критический перегруз!";
+                    WorkloadProgress.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EF4444"));                     WorkloadStatusText.Text = "Критический перегруз!";
                     WorkloadStatusText.Foreground = WorkloadProgress.Foreground;
                 }
 
-                // 2. Расчет SLA и ART за последние 7 дней
-                var fromDate = DateTime.UtcNow.AddDays(-7);
+                                var fromDate = DateTime.UtcNow.AddDays(-7);
                 var toDate = DateTime.UtcNow;
 
                 double sla = await kpiService.CalculateSlaComplianceAsync(employee.Id, fromDate, toDate);
                 double art = await kpiService.CalculateArtAsync(employee.Id, fromDate, toDate);
 
                 SlaText.Text = $"{sla:0.#}%";
-                if (sla < 90) SlaText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EF4444")); // Если SLA просел
-
+                if (sla < 90) SlaText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EF4444")); 
                 ArtText.Text = $"{art:0.#}";
 
-                // 3. Загрузка списка задач
-                var activeTickets = await db.Tickets
+                                var activeTickets = await db.Tickets
                     .AsNoTracking()
                     .Where(t => t.AssigneeEmployeeId == employee.Id && t.Status != Constants.TicketStatus.Closed && t.Status != Constants.TicketStatus.Resolved)
                     .OrderBy(t => t.DueAt)

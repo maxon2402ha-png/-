@@ -18,12 +18,8 @@ namespace КР_Ханников.Services
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        // --- ЛОГИКА АВТОМАТИЗАЦИИ И БАЛАНСИРОВКИ НАГРУЗКИ ---
-
-        /// <summary>
-        /// Выбирает сотрудника для назначения на основе KPI (наименьший индекс нагрузки Workload).
-        /// </summary>
-        private async Task<int?> GetBestEmployeeForTicketAsync(TicketPriority newTicketPriority, CancellationToken ct)
+        
+                                private async Task<int?> GetBestEmployeeForTicketAsync(TicketPriority newTicketPriority, CancellationToken ct)
         {
             var candidates = await _context.Employees
                 .Include(e => e.User)
@@ -32,30 +28,25 @@ namespace КР_Ханников.Services
 
             if (!candidates.Any()) return null;
 
-            // Вытаскиваем все активные тикеты для расчета текущей нагрузки
-            var activeTickets = await _context.Tickets
+                        var activeTickets = await _context.Tickets
                 .Where(t => t.Status != Constants.TicketStatus.Closed && t.Status != Constants.TicketStatus.Resolved && t.AssigneeEmployeeId != null)
                 .Select(t => new { t.AssigneeEmployeeId, t.Priority })
                 .ToListAsync(ct);
 
-            // Создаем словарь нагрузок сотрудников
-            var workloadDict = candidates.ToDictionary(c => c.Id, c => 0);
+                        var workloadDict = candidates.ToDictionary(c => c.Id, c => 0);
 
-            // Подсчитываем текущую нагрузку в баллах для каждого
-            foreach (var t in activeTickets)
+                        foreach (var t in activeTickets)
             {
                 if (t.AssigneeEmployeeId.HasValue && workloadDict.ContainsKey(t.AssigneeEmployeeId.Value))
                 {
-                    workloadDict[t.AssigneeEmployeeId.Value] += KpiService.GetTicketWeight(t.Priority);
+                    workloadDict[t.AssigneeEmployeeId.Value] += WorkloadService.GetTicketWeight(t.Priority);
                 }
             }
 
-            // Ищем сотрудника с минимальным Workload Index
-            var bestCandidate = workloadDict.OrderBy(kvp => kvp.Value).First();
-            int newTicketWeight = KpiService.GetTicketWeight(newTicketPriority);
+                        var bestCandidate = workloadDict.OrderBy(kvp => kvp.Value).First();
+            int newTicketWeight = WorkloadService.GetTicketWeight(newTicketPriority);
 
-            // Если даже у самого свободного сотрудника превышен лимит нагрузки - оставляем тикет нераспределенным
-            if (bestCandidate.Value + newTicketWeight > KpiService.MaxWorkloadPoints)
+                        if (bestCandidate.Value + newTicketWeight > KpiService.MaxWorkloadPoints)
             {
                 return null;
             }
@@ -63,24 +54,16 @@ namespace КР_Ханников.Services
             return bestCandidate.Key;
         }
 
-        /// <summary>
-        /// Рассчитывает дедлайн на основе приоритета (SLA).
-        /// </summary>
-        private DateTime CalculateDeadline(TicketPriority priority)
+                                private DateTime CalculateDeadline(TicketPriority priority)
         {
             var now = DateTime.UtcNow;
             return priority switch
             {
-                TicketPriority.Critical => now.AddHours(4),   // 4 часа на критичный
-                TicketPriority.High => now.AddHours(24),      // 1 сутки на высокий
-                TicketPriority.Normal => now.AddDays(3),      // 3 дня на обычный
-                TicketPriority.Low => now.AddDays(7),         // Неделя на низкий
-                _ => now.AddDays(3)
+                TicketPriority.Critical => now.AddHours(4),                   TicketPriority.High => now.AddHours(24),                      TicketPriority.Normal => now.AddDays(3),                      TicketPriority.Low => now.AddDays(7),                         _ => now.AddDays(3)
             };
         }
 
-        // --- CRUD И БИЗНЕС-ЛОГИКА ---
-
+        
         public async Task<Ticket> CreateAsync(
             int clientId,
             string title,
@@ -92,17 +75,14 @@ namespace КР_Ханников.Services
             if (string.IsNullOrWhiteSpace(title))
                 throw new ArgumentException("Title is required", nameof(title));
 
-            // 1. Авто-классификация (ML / Правила)
-            var classifier = new TicketClassifier(new RuleBasedTicketClassifier());
+                        var classifier = new TicketClassifier(new RuleBasedTicketClassifier());
             var (category, priority, isMlUsed) = classifier.Classify(title, description ?? string.Empty);
 
             string aiMethodName = isMlUsed ? "Нейросеть (ML.NET)" : "Анализ ключевых слов";
 
-            // 2. Авто-расчет дедлайна
-            var dueAt = manualDueAt ?? CalculateDeadline(priority);
+                        var dueAt = manualDueAt ?? CalculateDeadline(priority);
 
-            // 3. Авто-назначение сотрудника (с учетом Индекса нагрузки)
-            int? assigneeId = await GetBestEmployeeForTicketAsync(priority, ct);
+                        int? assigneeId = await GetBestEmployeeForTicketAsync(priority, ct);
             string status = assigneeId.HasValue ? Constants.TicketStatus.InProgress : Constants.TicketStatus.Open;
 
             var ticket = new Ticket
@@ -120,8 +100,7 @@ namespace КР_Ханников.Services
                 History = new List<TicketHistory>()
             };
 
-            // 4. Пишем историю классификации
-            ticket.History.Add(new TicketHistory
+                        ticket.History.Add(new TicketHistory
             {
                 Action = "Умная классификация",
                 Details = $"Алгоритм: {aiMethodName}\nКатегория: {category} | Приоритет: {priority}\nСрок (SLA): {dueAt:dd.MM.yy HH:mm}",
@@ -131,7 +110,7 @@ namespace КР_Ханников.Services
             if (assigneeId.HasValue)
             {
                 var empName = await _context.Employees.Where(e => e.Id == assigneeId).Select(e => e.Name).FirstOrDefaultAsync(ct);
-                int weight = KpiService.GetTicketWeight(priority);
+                int weight = WorkloadService.GetTicketWeight(priority);
 
                 ticket.History.Add(new TicketHistory
                 {
@@ -164,13 +143,11 @@ namespace КР_Ханников.Services
             var emp = await _context.Employees.AsNoTracking().FirstOrDefaultAsync(e => e.Id == employeeId, ct);
             if (emp == null) throw new InvalidOperationException("Сотрудник не найден");
 
-            // --- ИНТЕЛЛЕКТУАЛЬНАЯ ЗАЩИТА ОТ ПЕРЕГРУЗКИ (KPI) ---
-            var kpiService = new KpiService(_context);
+                        var kpiService = new KpiService(_context);
             int currentLoad = await kpiService.CalculateEmployeeWorkloadAsync(employeeId);
-            int ticketWeight = KpiService.GetTicketWeight(t.Priority);
+            int ticketWeight = WorkloadService.GetTicketWeight(t.Priority);
 
-            // Если мы пытаемся назначить тикет на нового сотрудника и это вызовет перегруз
-            if (t.AssigneeEmployeeId != employeeId && (currentLoad + ticketWeight > KpiService.MaxWorkloadPoints))
+                        if (t.AssigneeEmployeeId != employeeId && (currentLoad + ticketWeight > KpiService.MaxWorkloadPoints))
             {
                 throw new InvalidOperationException(
                     $"ВНИМАНИЕ: Назначение заблокировано!\n\n" +
@@ -178,8 +155,7 @@ namespace КР_Ханников.Services
                     $"Вес заявки: {ticketWeight} баллов (Приоритет: {t.Priority}).\n\n" +
                     $"Назначьте заявку на другого специалиста.");
             }
-            // ----------------------------------------------------
-
+            
             var oldStatus = t.Status;
             t.AssigneeEmployeeId = employeeId;
 

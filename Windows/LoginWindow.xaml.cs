@@ -41,8 +41,7 @@ namespace КР_Ханников.Windows
         {
             try
             {
-                // Используем сохраненные настройки
-                if (Properties.Settings.Default.IsRemembered)
+                                if (Properties.Settings.Default.IsRemembered)
                 {
                     UsernameBox.Text = Properties.Settings.Default.Username;
                     RememberMeCheck.IsChecked = true;
@@ -55,8 +54,7 @@ namespace КР_Ханников.Windows
             }
             catch
             {
-                // Если настройки недоступны, просто игнорируем
-            }
+                            }
         }
 
         private void SaveCredentials(string username)
@@ -161,8 +159,7 @@ namespace КР_Ханников.Windows
 
         private void HideError()
         {
-            // Метод оставлен пустым, чтобы не было ошибок компиляции
-        }
+                    }
 
         private void ApplyUserTheme(int userId)
         {

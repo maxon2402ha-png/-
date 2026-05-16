@@ -25,8 +25,7 @@ namespace КР_Ханников
 
         protected override void OnStartup(StartupEventArgs e)
         {
-            // Настройка культуры
-            var culture = new CultureInfo("ru-RU");
+                        var culture = new CultureInfo("ru-RU");
             Thread.CurrentThread.CurrentCulture = culture;
             Thread.CurrentThread.CurrentUICulture = culture;
             FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement),
@@ -37,21 +36,16 @@ namespace КР_Ханников
 
             try
             {
-                // 1. Подключаемся к базе в основном потоке
-                using (var context = CreateDbContext())
+                                using (var context = CreateDbContext())
                 {
-                    // Создаем базу, если ее еще нет
-                    context.Database.EnsureCreated();
+                                        context.Database.EnsureCreated();
 
-                    // Создаем или обновляем администратора
-                    EnsureAdminExists(context);
+                                        EnsureAdminExists(context);
 
-                    // ЗАПОЛНЕНИЕ ТЕСТОВЫМИ ДАННЫМИ
-                    DbSeeder.SeedAsync(context).Wait();
+                                        DbSeeder.SeedAsync(context).Wait();
                 }
 
-                // === 2. ЗАПУСКАЕМ ОБУЧЕНИЕ ИИ В ФОНОВОМ ПОТОКЕ ===
-                Task.Run(() =>
+                                Task.Run(() =>
                 {
                     try
                     {
@@ -66,8 +60,7 @@ namespace КР_Ханников
                     }
                 });
 
-                // 3. Открываем окно входа
-                var loginContext = CreateDbContext();
+                                var loginContext = CreateDbContext();
                 var authService = new AuthService(loginContext);
                 var loginWindow = new LoginWindow(loginContext, authService);
                 loginWindow.Show();
@@ -90,8 +83,7 @@ namespace КР_Ханников
 
                 if (adminUser != null)
                 {
-                    // Используем Enhanced-методы, как в AuthService
-                    if (!BCrypt.Net.BCrypt.EnhancedVerify(defaultPassword, adminUser.PasswordHash))
+                                        if (!BCrypt.Net.BCrypt.EnhancedVerify(defaultPassword, adminUser.PasswordHash))
                     {
                         adminUser.PasswordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(defaultPassword, 13);
                     }

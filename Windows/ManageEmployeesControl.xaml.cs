@@ -115,8 +115,7 @@ namespace КР_Ханников.Windows
         {
             try
             {
-                // ИСПРАВЛЕНИЕ: Вызываем конструктор без параметров, чтобы исправить ошибку CS1729
-                var addWindow = new AddEmployeeWindow();
+                                var addWindow = new AddEmployeeWindow();
                 addWindow.Owner = Window.GetWindow(this);
 
                 if (addWindow.ShowDialog() == true)
@@ -343,8 +342,7 @@ namespace КР_Ханников.Windows
                         {
                             dbUser.Role = newRole;
 
-                            // Если пользователь стал сотрудником, создаем профиль Employee, если его нет
-                            if (newRole == "Admin" || newRole == "Support")
+                                                        if (newRole == "Admin" || newRole == "Support")
                             {
                                 var existingEmp = await db.Employees.FirstOrDefaultAsync(e => e.UserId == dbUser.Id);
                                 if (existingEmp == null)

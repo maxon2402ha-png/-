@@ -3,10 +3,7 @@ using System.IO;
 
 namespace КР_Ханников.Core
 {
-    /// <summary>
-    /// Централизованное хранилище всех констант приложения.
-    /// </summary>
-    public static class Constants
+                public static class Constants
     {
         public static class TicketStatus
         {
@@ -36,21 +33,17 @@ namespace КР_Ханников.Core
                 => role == Admin || role == Support;
         }
 
-        /// <summary>
-        /// Настройки подключения к PostgreSQL.
-        /// </summary>
-        public static class Database
+                                public static class Database
         {
-            // === НАСТРОЙКИ СЕРВЕРА ===
+  
             private const string Host = "localhost";
             private const string Port = "5432";
 
-            // ИСПРАВЛЕНИЕ: Изменили имя БД на _v2, чтобы создать новую чистую базу со всеми колонками
-            private const string DbName = "TicketSystemDb"; // Новое имя
+            private const string DbName = "TicketSystemDb"; 
 
             private const string User = "postgres";
 
-            // !!! ВНИМАНИЕ: Впиши сюда свой пароль, который вводил в pgAdmin !!!
+
             private const string Password = "qwerty";
 
             public static string GetConnectionString()
@@ -70,7 +63,6 @@ namespace КР_Ханников.Core
                 );
             }
 
-            // Заглушка для совместимости
             public static string GetDatabasePath() => "";
         }
 

@@ -7,17 +7,12 @@ using КР_Ханников.Services;
 
 namespace КР_Ханников.Core
 {
-    /// <summary>
-    /// Интеллектуальный классификатор.
-    /// Пытается использовать ML.NET модель. Если модели нет, использует RuleBasedTicketClassifier.
-    /// </summary>
-    public class TicketClassifier : ITicketClassifier
+                    public class TicketClassifier : ITicketClassifier
     {
         private const string CategoryModelFileName = "ticket_category_model.zip";
         private const string PriorityModelFileName = "ticket_priority_model.zip";
 
-        private readonly ITicketClassifier _fallback; // Резервный алгоритм (правила)
-        private readonly MLContext _mlContext;
+        private readonly ITicketClassifier _fallback;         private readonly MLContext _mlContext;
 
         private PredictionEngine<TextInput, CategoryPrediction>? _categoryEngine;
         private PredictionEngine<TextInput, PriorityPrediction>? _priorityEngine;
@@ -26,8 +21,7 @@ namespace КР_Ханников.Core
 
         public TicketClassifier(ITicketClassifier? fallback = null)
         {
-            // Если fallback не передан, создаем классификатор по правилам
-            _fallback = fallback ?? new RuleBasedTicketClassifier();
+                        _fallback = fallback ?? new RuleBasedTicketClassifier();
             _mlContext = new MLContext();
 
             TryLoadModels();
@@ -39,8 +33,7 @@ namespace КР_Ханников.Core
             var safeDescription = description ?? string.Empty;
             var text = $"{safeTitle} {safeDescription}".Trim();
 
-            // Если текста нет или ML не загружен — падаем на правила
-            if (string.IsNullOrWhiteSpace(text) || !IsModelLoaded)
+                        if (string.IsNullOrWhiteSpace(text) || !IsModelLoaded)
             {
                 return _fallback.Classify(safeTitle, safeDescription);
             }
@@ -49,12 +42,10 @@ namespace КР_Ханников.Core
             {
                 var input = new TextInput { Text = text };
 
-                // 1. Сначала получаем предсказания от ML-моделей (вернули эти строки!)
-                var catPred = _categoryEngine!.Predict(input);
+                                var catPred = _categoryEngine!.Predict(input);
                 var prioPred = _priorityEngine!.Predict(input);
 
-                // 2. Затем безопасно конвертируем текст в Enum с явным указанием типов <...>
-                var category = Enum.TryParse<TicketCategory>(catPred.CategoryLabel, out var catResult)
+                                var category = Enum.TryParse<TicketCategory>(catPred.CategoryLabel, out var catResult)
                     ? catResult : TicketCategory.General;
 
                 var priority = Enum.TryParse<TicketPriority>(prioPred.PriorityLabel, out var prioResult)
@@ -79,8 +70,7 @@ namespace КР_Ханников.Core
                 var priorityModelPath = Path.Combine(modelsDir, PriorityModelFileName);
 
                 if (!File.Exists(categoryModelPath) || !File.Exists(priorityModelPath))
-                    return; // Модели еще не обучены
-
+                    return; 
                 using var catStream = File.OpenRead(categoryModelPath);
                 var categoryModel = _mlContext.Model.Load(catStream, out _);
 
@@ -96,8 +86,7 @@ namespace КР_Ханников.Core
             }
         }
 
-        // Внутренние классы данных для ML
-        private sealed class TextInput { public string Text { get; set; } = string.Empty; }
+                private sealed class TextInput { public string Text { get; set; } = string.Empty; }
         private sealed class CategoryPrediction { [ColumnName("PredictedLabel")] public string CategoryLabel { get; set; } = string.Empty; }
         private sealed class PriorityPrediction { [ColumnName("PredictedLabel")] public string PriorityLabel { get; set; } = string.Empty; }
     }

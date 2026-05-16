@@ -293,8 +293,7 @@ namespace КР_Ханников.Windows
                         .Where(t => t.Status != Constants.TicketStatus.Closed)
                         .ToListAsync();
 
-                    // IDE0305: Оптимизированная инициализация списка
-                    _allActiveTickets = [.. openTickets.Union(_periodTickets.Where(t => t.Status == Constants.TicketStatus.Closed))];
+                                        _allActiveTickets = [.. openTickets.Union(_periodTickets.Where(t => t.Status == Constants.TicketStatus.Closed))];
                 }
 
                 UpdateDashboard();
@@ -347,8 +346,7 @@ namespace КР_Ханников.Windows
                     });
                 }
 
-                // Оставляем ToList(), так как ItemsSource имеет тип IEnumerable
-                PerformanceMatrixGrid.ItemsSource = matrixData.OrderByDescending(m => m.WorkloadPoints).ToList();
+                                PerformanceMatrixGrid.ItemsSource = matrixData.OrderByDescending(m => m.WorkloadPoints).ToList();
             }
             catch (Exception ex)
             {
@@ -376,8 +374,7 @@ namespace КР_Ханников.Windows
 
                 BuildCharts(_periodTickets, categoryChartSet, priorityChartSet, assigneeChartSet);
 
-                // Оставляем ToList(), так как ItemsSource имеет тип IEnumerable
-                DashboardTicketsGrid.ItemsSource = _periodTickets.OrderByDescending(t => t.CreatedAt).ToList();
+                                DashboardTicketsGrid.ItemsSource = _periodTickets.OrderByDescending(t => t.CreatedAt).ToList();
             }
             catch (Exception ex)
             {
@@ -414,8 +411,7 @@ namespace КР_Ханников.Windows
                     t.Assignee.User != null &&
                     t.Assignee.User.Username == assignee);
 
-            // IDE0305: Возвращаем List<Ticket> с помощью выражения коллекции
-            return [.. query];
+                        return [.. query];
         }
 
         private void CalculateKpi(List<Ticket> tickets)
@@ -436,8 +432,7 @@ namespace КР_Ханников.Windows
             double percent = total == 0 ? 0 : (double)closed / total * 100.0;
             KpiResolvedPercentText = $"{percent:0.#}%";
 
-            // IDE0305: Оптимизированная инициализация списка
-            List<double> resolvedTimes = [.. tickets
+                        List<double> resolvedTimes = [.. tickets
                 .Where(t => t.Status == Constants.TicketStatus.Closed && t.ClosedAt.HasValue)
                 .Select(t => (t.ClosedAt!.Value - t.CreatedAt).TotalHours)];
 

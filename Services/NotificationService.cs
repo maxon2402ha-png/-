@@ -21,16 +21,14 @@ namespace КР_Ханников.Services
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
         }
 
-        // --- Внутренний метод создания уведомления ---
-        private void CreateNotification(
+                private void CreateNotification(
             int userId,
             string title,
             string message,
             string type,
             int? ticketId = null)
         {
-            // 1. Сохраняем в базу (для Центра Уведомлений)
-            var notification = new Notification
+                        var notification = new Notification
             {
                 UserId = userId,
                 Title = title,
@@ -44,22 +42,20 @@ namespace КР_Ханников.Services
             _context.Notifications.Add(notification);
             _context.SaveChanges();
 
-            // 2. Если пользователь сейчас онлайн — показываем всплывающий Toast
-            var current = _authService.CurrentUser;
+                        var current = _authService.CurrentUser;
             if (current != null && current.Id == userId)
             {
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     try
                     {
-                        // Определяем стиль уведомления для Toast (используем строки)
-                        string toastType = "Info";
+                                                string toastType = "Info";
 
-                        if (type == "Overdue" || type == "Error")
+                        if (type == "Overdue" || type == "Error" || type == "SlaRiskAlert")
                         {
                             toastType = "Error";
                         }
-                        else if (type == "DueSoon")
+                        else if (type == "DueSoon" || type == "WorkloadAlert")
                         {
                             toastType = "Warning";
                         }
@@ -68,9 +64,7 @@ namespace КР_Ханников.Services
                             toastType = "Success";
                         }
 
-                        // Создаём Toast с типом как строкой
-                        // Используем статический метод Show для безопасности
-                        ToastWindow.Show(title, message, toastType, ticketId);
+                                                                        ToastWindow.Show(title, message, toastType, ticketId);
                     }
                     catch (Exception ex)
                     {
@@ -92,10 +86,8 @@ namespace КР_Ханников.Services
             return settings;
         }
 
-        // --- ПУБЛИЧНЫЕ МЕТОДЫ ---
-
-        // 1. Новые тикеты (для Support/Admin)
-        public void NotifyOperatorsAboutNewTicket(Ticket ticket)
+        
+                public void NotifyOperatorsAboutNewTicket(Ticket ticket)
         {
             var operators = _context.Users
                 .Where(u => u.Role == Constants.UserRoles.Support || u.Role == Constants.UserRoles.Admin)
@@ -111,22 +103,19 @@ namespace КР_Ханников.Services
             }
         }
 
-        // 2. Смена статуса (для Клиента и Исполнителя)
-        public void NotifyStatusChanged(Ticket ticket, string oldStatus, string newStatus)
+                public void NotifyStatusChanged(Ticket ticket, string oldStatus, string newStatus)
         {
             if (oldStatus == newStatus) return;
 
             var msg = $"Статус тикета #{ticket.Id} изменён: {oldStatus} -> {newStatus}";
 
-            // Клиент - находим UserId клиента
-            var clientUser = _context.Clients.AsNoTracking().FirstOrDefault(c => c.Id == ticket.ClientId);
+                        var clientUser = _context.Clients.AsNoTracking().FirstOrDefault(c => c.Id == ticket.ClientId);
             if (clientUser != null && GetSettings(clientUser.UserId).NotifyOnStatusChanged)
             {
                 CreateNotification(clientUser.UserId, "Обновление статуса", msg, "StatusChanged", ticket.Id);
             }
 
-            // Исполнитель
-            if (ticket.AssigneeEmployeeId.HasValue)
+                        if (ticket.AssigneeEmployeeId.HasValue)
             {
                 var emp = _context.Employees.AsNoTracking().FirstOrDefault(e => e.Id == ticket.AssigneeEmployeeId);
                 if (emp != null && GetSettings(emp.UserId).NotifyOnStatusChanged)
@@ -136,8 +125,7 @@ namespace КР_Ханников.Services
             }
         }
 
-        // 3. Изменение дедлайна (ручное)
-        public void NotifyDueDateChanged(Ticket ticket, DateTime? oldDue, DateTime? newDue)
+                public void NotifyDueDateChanged(Ticket ticket, DateTime? oldDue, DateTime? newDue)
         {
             if (!newDue.HasValue || !ticket.AssigneeEmployeeId.HasValue) return;
 
@@ -149,8 +137,7 @@ namespace КР_Ханников.Services
             }
         }
 
-        // 4. Проверка сроков (Фоновая задача, вызывается таймером)
-        public void CheckDueSoonTicketsForCurrentUser()
+                public void CheckDueSoonTicketsForCurrentUser()
         {
             var current = _authService.CurrentUser;
             if (current == null) return;
@@ -161,20 +148,17 @@ namespace КР_Ханников.Services
             var now = DateTime.UtcNow;
             var threshold = now.AddMinutes(settings.DueSoonThresholdMinutes);
 
-            // Ищем тикеты пользователя, которые скоро истекут (или истекли)
-            var ticketsQuery = _context.Tickets.AsNoTracking().Where(t => t.Status != Constants.TicketStatus.Closed && t.DueAt.HasValue);
+                        var ticketsQuery = _context.Tickets.AsNoTracking().Where(t => t.Status != Constants.TicketStatus.Closed && t.DueAt.HasValue);
 
             if (current.Role == Constants.UserRoles.Support || current.Role == Constants.UserRoles.Admin)
             {
-                // Для сотрудника: тикеты, назначенные на него
-                var emp = _context.Employees.FirstOrDefault(e => e.UserId == current.Id);
+                                var emp = _context.Employees.FirstOrDefault(e => e.UserId == current.Id);
                 if (emp == null) return;
                 ticketsQuery = ticketsQuery.Where(t => t.AssigneeEmployeeId == emp.Id);
             }
             else
             {
-                // Для клиента: его тикеты
-                var client = _context.Clients.FirstOrDefault(c => c.UserId == current.Id);
+                                var client = _context.Clients.FirstOrDefault(c => c.UserId == current.Id);
                 if (client == null) return;
                 ticketsQuery = ticketsQuery.Where(t => t.ClientId == client.Id);
             }
@@ -204,8 +188,62 @@ namespace КР_Ханников.Services
             }
         }
 
-        // 5. Показ непрочитанных при входе
-        public void ShowUnreadNotificationsForCurrentUser()
+                                        public void CheckWorkloadAlertsForCurrentUser()
+        {
+            var current = _authService.CurrentUser;
+            if (current == null) return;
+
+                        if (current.Role != Constants.UserRoles.Admin) return;
+
+            try
+            {
+                                                                using var db = App.CreateDbContext();
+
+                                var workloadService = new WorkloadService(db);
+                var summary = workloadService.GetSummaryAsync().GetAwaiter().GetResult();
+
+                if (summary.OverloadedCount > 0)
+                {
+                                                            bool alreadyNotified = _context.Notifications.Any(n =>
+                        n.UserId == current.Id
+                        && n.Type == "WorkloadAlert"
+                        && !n.IsRead);
+
+                    if (!alreadyNotified)
+                    {
+                        CreateNotification(current.Id, "Перегрузка операторов",
+                            $"Перегружено операторов: {summary.OverloadedCount}. " +
+                            "Рекомендуется перераспределить нагрузку.",
+                            "WorkloadAlert");
+                    }
+                }
+
+                                var forecastService = new ForecastService(db);
+                var risk = forecastService.AssessSlaRiskAsync(7).GetAwaiter().GetResult();
+
+                if (risk.HasEnoughData && risk.RiskLevel == SlaRiskLevel.High)
+                {
+                    bool slaNotified = _context.Notifications.Any(n =>
+                        n.UserId == current.Id
+                        && n.Type == "SlaRiskAlert"
+                        && !n.IsRead);
+
+                    if (!slaNotified)
+                    {
+                        CreateNotification(current.Id, "Риск срыва SLA",
+                            "Прогнозируемая нагрузка превышает возможности команды " +
+                            "на ближайшую неделю.",
+                            "SlaRiskAlert");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[WorkloadAlerts] {ex.Message}");
+            }
+        }
+
+                public void ShowUnreadNotificationsForCurrentUser()
         {
             var current = _authService.CurrentUser;
             if (current == null) return;

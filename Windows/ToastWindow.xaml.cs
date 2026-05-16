@@ -16,15 +16,11 @@ namespace КР_Ханников.Windows
         private Storyboard? _progressStoryboard;
         private bool _isPaused = false;
 
-        /// <summary>
-        /// Конструктор по умолчанию
-        /// </summary>
-        public ToastWindow()
+                                public ToastWindow()
         {
             InitializeComponent();
 
-            // Fallback таймер автозакрытия (если анимация прогресс-бара не сработает)
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+                        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
             _timer.Tick += (s, e) =>
             {
                 _timer.Stop();
@@ -32,18 +28,12 @@ namespace КР_Ханников.Windows
             };
         }
 
-        /// <summary>
-        /// Конструктор только с заголовком и сообщением
-        /// </summary>
-        public ToastWindow(string title, string message)
+                                public ToastWindow(string title, string message)
             : this(title, message, "Info", null)
         {
         }
 
-        /// <summary>
-        /// Основной конструктор со строковым типом
-        /// </summary>
-        public ToastWindow(string title, string message, string type = "Info", int? ticketId = null)
+                                public ToastWindow(string title, string message, string type = "Info", int? ticketId = null)
             : this()
         {
             _ticketId = ticketId;
@@ -55,11 +45,9 @@ namespace КР_Ханников.Windows
             if (MessageText != null)
                 MessageText.Text = message ?? string.Empty;
 
-            // Настройка стиля по типу
-            ApplyTypeStyle(type ?? "Info");
+                        ApplyTypeStyle(type ?? "Info");
 
-            // Позиционирование
-            PositionWindow();
+                        PositionWindow();
         }
 
         private void ApplyTypeStyle(string type)
@@ -71,42 +59,35 @@ namespace КР_Ханников.Windows
             {
                 case "success":
                 case "closed":
-                    backgroundColor = "#10B981"; // Green
-                    iconKey = "Icon.Check";
+                    backgroundColor = "#10B981";                     iconKey = "Icon.Check";
                     break;
                 case "warning":
                 case "duesoon":
-                    backgroundColor = "#F59E0B"; // Orange
-                    iconKey = "Icon.Warning";
+                    backgroundColor = "#F59E0B";                     iconKey = "Icon.Warning";
                     break;
                 case "error":
                 case "overdue":
-                    backgroundColor = "#EF4444"; // Red
-                    iconKey = "Icon.Error";
+                    backgroundColor = "#EF4444";                     iconKey = "Icon.Error";
                     break;
                 case "info":
                 default:
-                    backgroundColor = "#2563EB"; // Blue
-                    iconKey = "Icon.Bell";
+                    backgroundColor = "#2563EB";                     iconKey = "Icon.Bell";
                     break;
             }
 
             try
             {
-                // Устанавливаем цвет фона иконки
-                if (IconBorder != null)
+                                if (IconBorder != null)
                 {
                     IconBorder.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(backgroundColor));
                 }
 
-                // Устанавливаем иконку (Path геометрию)
-                if (IconPath != null && TryFindResource(iconKey) is Geometry geometry)
+                                if (IconPath != null && TryFindResource(iconKey) is Geometry geometry)
                 {
                     IconPath.Data = geometry;
                 }
 
-                // Прогресс-бар
-                if (ProgressBar != null)
+                                if (ProgressBar != null)
                 {
                     ProgressBar.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(backgroundColor));
                 }
@@ -136,14 +117,12 @@ namespace КР_Ханников.Windows
         {
             try
             {
-                // Запускаем анимацию появления
-                if (TryFindResource("SlideIn") is Storyboard slideIn)
+                                if (TryFindResource("SlideIn") is Storyboard slideIn)
                 {
                     slideIn.Begin(this);
                 }
 
-                // Анимация прогресс-бара (автозакрытие через 5 сек)
-                if (TryFindResource("ProgressAnimation") is Storyboard progressAnim)
+                                if (TryFindResource("ProgressAnimation") is Storyboard progressAnim)
                 {
                     _progressStoryboard = progressAnim;
                     _progressStoryboard.Completed += (s, args) => CloseWithAnimation();
@@ -151,12 +130,10 @@ namespace КР_Ханников.Windows
                 }
                 else
                 {
-                    // Fallback - обычный таймер
-                    _timer.Start();
+                                        _timer.Start();
                 }
 
-                // Звук уведомления
-                try { System.Media.SystemSounds.Asterisk.Play(); } catch { }
+                                try { System.Media.SystemSounds.Asterisk.Play(); } catch { }
             }
             catch (Exception ex)
             {
@@ -165,12 +142,10 @@ namespace КР_Ханников.Windows
             }
         }
 
-        // ===================== СОБЫТИЯ МЫШИ =====================
-
+        
         private void Window_MouseEnter(object sender, MouseEventArgs e)
         {
-            // Пауза автозакрытия при наведении
-            if (_progressStoryboard != null && !_isPaused)
+                        if (_progressStoryboard != null && !_isPaused)
             {
                 try
                 {
@@ -185,8 +160,7 @@ namespace КР_Ханников.Windows
 
         private void Window_MouseLeave(object sender, MouseEventArgs e)
         {
-            // Возобновление автозакрытия
-            if (_progressStoryboard != null && _isPaused)
+                        if (_progressStoryboard != null && _isPaused)
             {
                 try
                 {
@@ -196,8 +170,7 @@ namespace КР_Ханников.Windows
                 catch { }
             }
 
-            // Не перезапускаем таймер, если прогресс-анимация работает
-            if (_progressStoryboard == null)
+                        if (_progressStoryboard == null)
             {
                 _timer?.Start();
             }
@@ -205,8 +178,7 @@ namespace КР_Ханников.Windows
 
         private void Toast_Click(object sender, MouseButtonEventArgs e)
         {
-            // Переход к связанному тикету
-            int? ticketId = _ticketId ?? (Tag as int?);
+                        int? ticketId = _ticketId ?? (Tag as int?);
 
             if (ticketId.HasValue)
             {
@@ -259,8 +231,7 @@ namespace КР_Ханников.Windows
             Close();
         }
 
-        // ===================== СТАТИЧЕСКИЕ МЕТОДЫ =====================
-
+        
         public static void Show(string title, string message, string type = "Info", int? ticketId = null)
         {
             Application.Current?.Dispatcher.Invoke(() =>

@@ -4,17 +4,14 @@
 
 namespace КР_Ханников.Migrations
 {
-    /// <inheritdoc />
-    public partial class AddTicket : Migration
+        public partial class AddTicket : Migration
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
+                protected override void Up(MigrationBuilder migrationBuilder)
         {
 
         }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
+                protected override void Down(MigrationBuilder migrationBuilder)
         {
 
         }

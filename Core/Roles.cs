@@ -2,7 +2,7 @@
 
 namespace КР_Ханников.Core
 {
-    // РЕКОМЕНДАЦИЯ: Лучше использовать Constants.UserRoles
+  
     public static class Roles
     {
         public const string Admin = "Admin";

@@ -8,16 +8,18 @@ namespace КР_Ханников.Data
 {
     public static class DbSeeder
     {
+      
+        private static readonly Random Rnd = new(20240517);
+
         public static async Task SeedAsync(AppDbContext context)
         {
-            // Проверяем, есть ли уже данные. Если есть хотя бы один тикет — не трогаем базу.
+           
             if (context.Tickets.Any()) return;
 
-            // Стандартный пароль для всех тестовых учеток: "password"
             string passHash = BCrypt.Net.BCrypt.EnhancedHashPassword("password", 13);
             var now = DateTime.UtcNow;
 
-            // --- 1. СОЗДАЕМ ПОЛЬЗОВАТЕЛЕЙ (Сотрудники поддержки) ---
+
             var techUser1 = new User { Username = "tech.ivanov", PasswordHash = passHash, Role = Constants.UserRoles.Support, CreatedAt = now };
             var techUser2 = new User { Username = "tech.smirnov", PasswordHash = passHash, Role = Constants.UserRoles.Support, CreatedAt = now };
             var techUser3 = new User { Username = "tech.orlov", PasswordHash = passHash, Role = Constants.UserRoles.Support, CreatedAt = now };
@@ -25,15 +27,13 @@ namespace КР_Ханников.Data
             context.Users.AddRange(techUser1, techUser2, techUser3);
             await context.SaveChangesAsync();
 
-            // Привязываем их к сущности Employee
-            var emp1 = new Employee { UserId = techUser1.Id, Name = "Иван Иванов", Role = Constants.UserRoles.Support };
-            var emp2 = new Employee { UserId = techUser2.Id, Name = "Сергей Смирнов", Role = Constants.UserRoles.Support };
-            var emp3 = new Employee { UserId = techUser3.Id, Name = "Алексей Орлов", Role = Constants.UserRoles.Support };
+            var emp1 = new Employee { UserId = techUser1.Id, Name = "Иван Иванов", Role = Constants.UserRoles.Support, MaxActiveTickets = 8 };
+            var emp2 = new Employee { UserId = techUser2.Id, Name = "Сергей Смирнов", Role = Constants.UserRoles.Support, MaxActiveTickets = 6 };
+            var emp3 = new Employee { UserId = techUser3.Id, Name = "Алексей Орлов", Role = Constants.UserRoles.Support, MaxActiveTickets = 6 };
 
             context.Employees.AddRange(emp1, emp2, emp3);
             await context.SaveChangesAsync();
 
-            // --- 2. СОЗДАЕМ ПОЛЬЗОВАТЕЛЕЙ (Клиенты) ---
             var clientUser1 = new User { Username = "client.ooo", PasswordHash = passHash, Role = Constants.UserRoles.Client, CreatedAt = now };
             var clientUser2 = new User { Username = "client.ip", PasswordHash = passHash, Role = Constants.UserRoles.Client, CreatedAt = now };
 
@@ -46,56 +46,143 @@ namespace КР_Ханников.Data
             context.Clients.AddRange(client1, client2);
             await context.SaveChangesAsync();
 
-            // --- 3. ГЕНЕРИРУЕМ ТИКЕТЫ ДЛЯ КРАСИВЫХ ГРАФИКОВ KPI ---
-            var tickets = new List<Ticket>
+      
+
+
+            var empToUser = new Dictionary<int, int>
             {
-                // Тикеты Иванова (Перегружен, есть просрочки)
-                CreateTicket(client1.Id, "Не работает 1С", "При входе выдает ошибку лицензии.", Constants.TicketStatus.InProgress, TicketPriority.Critical, TicketCategory.Software, emp1.Id, now.AddDays(-2), now.AddHours(-5)),
-                CreateTicket(client2.Id, "Отвалился VPN", "Сотрудники на удаленке не могут подключиться.", Constants.TicketStatus.InProgress, TicketPriority.High, TicketCategory.Network, emp1.Id, now.AddDays(-1), now.AddHours(2)),
-                CreateTicket(client1.Id, "Настройка принтера", "Нужно подключить сетевой принтер в бухгалтерии.", Constants.TicketStatus.Open, TicketPriority.Low, TicketCategory.Hardware, emp1.Id, now.AddHours(-10), now.AddDays(2)),
-                CreateTicket(client2.Id, "Зависает сервер БД", "Постоянные таймауты при запросах.", Constants.TicketStatus.InProgress, TicketPriority.Critical, TicketCategory.Network, emp1.Id, now.AddHours(-2), now.AddHours(2)),
-
-                // Тикеты Смирнова (Работает нормально, соблюдает SLA)
-                CreateTicket(client1.Id, "Забыл пароль", "Прошу сбросить пароль от почты.", Constants.TicketStatus.Closed, TicketPriority.Normal, TicketCategory.Software, emp2.Id, now.AddDays(-5), now.AddDays(-2), now.AddDays(-4)),
-                CreateTicket(client2.Id, "Выдать права новому сотруднику", "Нужен доступ к CRM.", Constants.TicketStatus.Closed, TicketPriority.Normal, TicketCategory.Software, emp2.Id, now.AddDays(-4), now.AddDays(-1), now.AddDays(-3)),
-                CreateTicket(client1.Id, "Замена мышки", "Сломалось колесико.", Constants.TicketStatus.InProgress, TicketPriority.Low, TicketCategory.Hardware, emp2.Id, now.AddHours(-5), now.AddDays(5)),
-
-                // Тикеты Орлова (Свободен)
-                CreateTicket(client2.Id, "Обновить сертификаты", "Заканчивается срок действия SSL.", Constants.TicketStatus.InProgress, TicketPriority.High, TicketCategory.Network, emp3.Id, now.AddDays(-1), now.AddDays(1)),
-                CreateTicket(client1.Id, "Синий экран на ПК", "Компьютер директора уходит в BSOD.", Constants.TicketStatus.Closed, TicketPriority.Critical, TicketCategory.Hardware, emp3.Id, now.AddDays(-10), now.AddDays(-9), now.AddDays(-9).AddHours(2)),
-
-                // Нераспределенные тикеты (Очередь)
-                CreateTicket(client2.Id, "Заявка на закупку", "Нужно купить 5 мониторов.", Constants.TicketStatus.Open, TicketPriority.Low, TicketCategory.Hardware, null, now.AddHours(-1), now.AddDays(7)),
-                CreateTicket(client1.Id, "Ошибка на сайте", "Клиенты жалуются на нерабочую корзину.", Constants.TicketStatus.Open, TicketPriority.High, TicketCategory.Software, null, now.AddMinutes(-30), now.AddHours(24))
+                { emp1.Id, techUser1.Id },
+                { emp2.Id, techUser2.Id },
+                { emp3.Id, techUser3.Id }
             };
+
+            var employeeIds = new int[] { emp1.Id, emp2.Id, emp3.Id };
+            var clientIds = new int[] { client1.Id, client2.Id };
+
+            var tickets = new List<Ticket>();
+            int dayCount = 70;
+
+            for (int d = dayCount; d >= 1; d--)
+            {
+                var day = now.Date.AddDays(-d);
+
+
+                bool isWeekend = day.DayOfWeek == DayOfWeek.Saturday
+                              || day.DayOfWeek == DayOfWeek.Sunday;
+
+                int ticketsToday = isWeekend
+                    ? Rnd.Next(0, 3)   
+                    : Rnd.Next(2, 7);  
+
+                for (int t = 0; t < ticketsToday; t++)
+                {
+                    var createdAt = day.AddHours(Rnd.Next(8, 19))
+                                        .AddMinutes(Rnd.Next(0, 60));
+
+                    tickets.Add(GenerateTicket(createdAt, employeeIds, clientIds, empToUser, now));
+                }
+            }
+
+
+            for (int i = 0; i < 4; i++)
+            {
+                var createdAt = now.AddHours(-Rnd.Next(1, 12));
+                var ticket = GenerateTicket(createdAt, employeeIds, clientIds, empToUser, now);
+                ticket.AssigneeEmployeeId = null;
+                ticket.Status = Constants.TicketStatus.Open;
+                ticket.ClosedAt = null;
+                ticket.Solution = null;
+                tickets.Add(ticket);
+            }
 
             context.Tickets.AddRange(tickets);
             await context.SaveChangesAsync();
 
-            // --- 4. ДОБАВЛЯЕМ СТАТЬИ В БАЗУ ЗНАНИЙ ---
+         
             context.KnowledgeBase.AddRange(
                 new KnowledgeArticle { Title = "Регламент сброса паролей", Content = "Для сброса пароля пользователя необходимо...", AuthorId = techUser1.Id, CreatedAt = now, UpdatedAt = now },
                 new KnowledgeArticle { Title = "Настройка VPN (WireGuard)", Content = "Инструкция по генерации конфигов для удаленных сотрудников...", AuthorId = techUser2.Id, CreatedAt = now, UpdatedAt = now }
             );
 
-            // --- 5. ДОБАВЛЯЕМ ПАРУ ЗАПИСЕЙ В АУДИТ ---
-            context.AuditLogs.AddRange(
-                new AuditLog { Username = "System", Action = "Database Seed", Details = "Успешная генерация тестовых данных.", Timestamp = now }
+ 
+            context.AuditLogs.Add(
+                new AuditLog { Username = "System", Action = "Database Seed", Details = $"Сгенерировано {tickets.Count} тестовых тикетов за {dayCount} дней.", Timestamp = now }
             );
 
             await context.SaveChangesAsync();
         }
 
-        private static Ticket CreateTicket(int clientId, string title, string desc, string status, TicketPriority priority, TicketCategory category, int? assigneeId, DateTime createdAt, DateTime dueAt, DateTime? closedAt = null)
+
+        private static readonly (string Title, string Desc, TicketCategory Cat)[] Templates =
         {
+            ("Не работает 1С", "При входе выдает ошибку лицензии.", TicketCategory.Software),
+            ("Отвалился VPN", "Сотрудники на удаленке не могут подключиться.", TicketCategory.Network),
+            ("Настройка принтера", "Нужно подключить сетевой принтер.", TicketCategory.Hardware),
+            ("Зависает сервер БД", "Постоянные таймауты при запросах.", TicketCategory.Network),
+            ("Забыл пароль", "Прошу сбросить пароль от почты.", TicketCategory.Software),
+            ("Выдать права сотруднику", "Нужен доступ к CRM.", TicketCategory.Software),
+            ("Замена мышки", "Сломалось колесико.", TicketCategory.Hardware),
+            ("Обновить сертификаты", "Заканчивается срок действия SSL.", TicketCategory.Network),
+            ("Синий экран на ПК", "Компьютер уходит в BSOD.", TicketCategory.Hardware),
+            ("Ошибка на сайте", "Клиенты жалуются на нерабочую корзину.", TicketCategory.Software),
+            ("Медленный интернет", "Низкая скорость в офисе.", TicketCategory.Network),
+            ("Не открывается почта", "Outlook не запускается.", TicketCategory.Software),
+        };
+
+        private static readonly TicketPriority[] Priorities =
+        {
+            TicketPriority.Low, TicketPriority.Normal, TicketPriority.Normal,
+            TicketPriority.High, TicketPriority.Critical
+        };
+
+                                private static Ticket GenerateTicket(
+            DateTime createdAt, int[] employeeIds, int[] clientIds,
+            Dictionary<int, int> empToUser, DateTime now)
+        {
+            var tpl = Templates[Rnd.Next(Templates.Length)];
+            var priority = Priorities[Rnd.Next(Priorities.Length)];
+            int assigneeId = employeeIds[Rnd.Next(employeeIds.Length)];
+            int clientId = clientIds[Rnd.Next(clientIds.Length)];
+
+            int dueHours = priority switch
+            {
+                TicketPriority.Critical => 8,
+                TicketPriority.High => 24,
+                TicketPriority.Normal => 72,
+                _ => 120
+            };
+            var dueAt = createdAt.AddHours(dueHours);
+
+            double ageDays = (now - createdAt).TotalDays;
+
+            string status;
+            DateTime? closedAt = null;
+
+          
+            if (ageDays > 5 && Rnd.NextDouble() < 0.85)
+            {
+                status = Constants.TicketStatus.Closed;
+                double resolveHours = Rnd.Next(2, 96);
+                closedAt = createdAt.AddHours(resolveHours);
+                if (closedAt > now) closedAt = now;
+            }
+            else if (ageDays > 1 && Rnd.NextDouble() < 0.5)
+            {
+                status = Constants.TicketStatus.InProgress;
+            }
+            else
+            {
+                status = Constants.TicketStatus.Open;
+            }
+
             var ticket = new Ticket
             {
                 ClientId = clientId,
-                Title = title,
-                Description = desc,
+                Title = tpl.Title,
+                Description = tpl.Desc,
                 Status = status,
                 Priority = priority,
-                Category = category,
+                Category = tpl.Cat,
                 AssigneeEmployeeId = assigneeId,
                 CreatedAt = createdAt,
                 UpdatedAt = createdAt,
@@ -106,6 +193,22 @@ namespace КР_Ханников.Data
                     new TicketHistory { Action = "Создание", Details = "Заявка создана через генератор данных.", Timestamp = createdAt }
                 }
             };
+
+            
+            var firstReplyAt = createdAt.AddHours(Rnd.Next(1, 9));
+            if (firstReplyAt < now && empToUser.TryGetValue(assigneeId, out int authorUserId))
+            {
+                ticket.Comments = new List<TicketComment>
+                {
+                    new TicketComment
+                    {
+                        UserId = authorUserId,
+                        Text = "Принято в работу, разбираемся.",
+                        IsInternal = false,
+                        CreatedAt = firstReplyAt
+                    }
+                };
+            }
 
             if (closedAt.HasValue)
             {

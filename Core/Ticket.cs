@@ -32,8 +32,7 @@ namespace КР_Ханников.Core
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Отключаем поиск колонки UpdatedAt
-        [NotMapped]
+                [NotMapped]
         public DateTime? UpdatedAt { get; set; }
 
         public DateTime? DueAt { get; set; }
@@ -64,7 +63,7 @@ namespace КР_Ханников.Core
         public int ClientId { get; set; }
         public Client Client { get; set; } = null!;
 
-        // Отключаем связь с User, которая ломала запрос
+     
         [NotMapped]
         public int? UserId { get; set; }
 

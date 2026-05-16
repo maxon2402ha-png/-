@@ -84,18 +84,15 @@ namespace КР_Ханников.Windows
                 _settings = new UserUiSettings { UserId = userId };
             }
 
-            // Заполняем UI
-            ShowKpiCheck.IsChecked = _settings.ShowKpiBlock;
+                        ShowKpiCheck.IsChecked = _settings.ShowKpiBlock;
             ShowChartsCheck.IsChecked = _settings.ShowChartsBlock;
             ShowTableCheck.IsChecked = _settings.ShowDetailedTable;
 
-            // Автообновление
-            bool isAuto = _settings.RefreshRateSeconds > 0;
+                        bool isAuto = _settings.RefreshRateSeconds > 0;
             AutoRefreshCheck.IsChecked = isAuto;
             RefreshSlider.Value = isAuto ? _settings.RefreshRateSeconds : 30;
 
-            // Период
-            foreach (ComboBoxItem item in PeriodCombo.Items)
+                        foreach (ComboBoxItem item in PeriodCombo.Items)
             {
                 if (item.Tag?.ToString() == _settings.DefaultPeriodDays.ToString())
                 {
@@ -163,8 +160,7 @@ namespace КР_Ханников.Windows
             ShowKpiCheck.IsChecked = true;
             ShowChartsCheck.IsChecked = true;
             ShowTableCheck.IsChecked = true;
-            PeriodCombo.SelectedIndex = 0; // 7 дней
-            AutoRefreshCheck.IsChecked = true;
+            PeriodCombo.SelectedIndex = 0;             AutoRefreshCheck.IsChecked = true;
             RefreshSlider.Value = 30;
 
             UpdateRefreshIntervalPanel();

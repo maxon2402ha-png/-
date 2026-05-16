@@ -15,16 +15,14 @@ namespace КР_Ханников.Windows
         public string ArticleTitle { get; private set; } = string.Empty;
         public string ArticleContent { get; private set; } = string.Empty;
 
-        // Конструктор для создания
-        public ArticleEditorWindow()
+                public ArticleEditorWindow()
         {
             InitializeComponent();
             WindowTitle.Text = "Новая статья";
             TitleBox.Focus();
         }
 
-        // Конструктор для редактирования
-        public ArticleEditorWindow(KnowledgeArticle article)
+                public ArticleEditorWindow(KnowledgeArticle article)
         {
             InitializeComponent();
             _article = article;
@@ -34,8 +32,7 @@ namespace КР_Ханников.Windows
             ContentBox.Text = article.Content;
         }
 
-        // Позволяет перетаскивать окно без системных рамок
-        private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+                private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ChangedButton == MouseButton.Left)
             {

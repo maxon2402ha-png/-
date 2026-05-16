@@ -16,7 +16,6 @@ using КР_Ханников.Core;
 using КР_Ханников.Data;
 using КР_Ханников.Services;
 
-// Явно указываем, какой Constants использовать
 using Constants = КР_Ханников.Core.Constants;
 
 namespace КР_Ханников.Windows
@@ -66,8 +65,7 @@ namespace КР_Ханников.Windows
 
         private void SetupComboBoxes()
         {
-            // IDE0031: Убраны избыточные проверки на null
-            StatusCombo.ItemsSource = Ticket.AllStatuses;
+                        StatusCombo.ItemsSource = Ticket.AllStatuses;
             PriorityCombo.ItemsSource = Enum.GetValues(typeof(TicketPriority));
         }
 
@@ -102,8 +100,7 @@ namespace КР_Ханников.Windows
 
                 _ticket = t;
 
-                // IDE0031: Убраны избыточные проверки на null для UI элементов
-                TicketIdHeader.Text = $"#{_ticket.Id}";
+                                TicketIdHeader.Text = $"#{_ticket.Id}";
                 TicketTitleHeader.Text = _ticket.Title;
                 DescriptionText.Text = string.IsNullOrWhiteSpace(_ticket.Description) ? "Нет описания" : _ticket.Description;
                 StatusText.Text = _ticket.Status;
@@ -155,8 +152,7 @@ namespace КР_Ханников.Windows
             bool isClosed = _ticket.Status == Constants.TicketStatus.Closed;
             bool isSupport = user.Role == Constants.UserRoles.Support || user.Role == Constants.UserRoles.Admin;
 
-            // IDE0031: Убраны избыточные проверки на null
-            OperatorControlsPanel.Visibility = (isSupport && !isClosed) ? Visibility.Visible : Visibility.Collapsed;
+                        OperatorControlsPanel.Visibility = (isSupport && !isClosed) ? Visibility.Visible : Visibility.Collapsed;
             InternalCheck.Visibility = isSupport ? Visibility.Visible : Visibility.Collapsed;
             InternalCheck.IsChecked = false;
 
@@ -193,8 +189,7 @@ namespace КР_Ханников.Windows
 
         private void UpdateSlaVisuals()
         {
-            // IDE0019: Сопоставление шаблонов для чистоты кода
-            if (FindName("SlaStatusText") is not TextBlock slaStatus ||
+                        if (FindName("SlaStatusText") is not TextBlock slaStatus ||
                 FindName("SlaProgressBar") is not ProgressBar slaProgress)
                 return;
 
@@ -267,8 +262,7 @@ namespace КР_Ханников.Windows
                 {
                     string displayName = c.Author?.Username ?? "Система";
 
-                    // CA1854: Использование TryGetValue
-                    if (clients.TryGetValue(c.UserId, out var clientName))
+                                        if (clients.TryGetValue(c.UserId, out var clientName))
                         displayName = clientName;
                     else if (employeeNames.TryGetValue(c.UserId, out var empName))
                         displayName = empName;
@@ -285,8 +279,7 @@ namespace КР_Ханников.Windows
                     };
                 }).ToList();
 
-                // IDE0031: Убраны избыточные проверки на null
-                CommentsList.ItemsSource = viewModels;
+                                CommentsList.ItemsSource = viewModels;
                 CommentsCountText.Text = viewModels.Count.ToString();
 
                 Dispatcher.InvokeAsync(() => CommentsScrollViewer?.ScrollToBottom(), DispatcherPriority.Background);
@@ -313,8 +306,7 @@ namespace КР_Ханников.Windows
                 var user = _authService.CurrentUser;
                 bool isInternal = false;
 
-                // IDE0031
-                if (user.Role != Constants.UserRoles.Client)
+                                if (user.Role != Constants.UserRoles.Client)
                 {
                     isInternal = InternalCheck.IsChecked == true;
                 }
@@ -558,8 +550,7 @@ namespace КР_Ханников.Windows
             Close();
         }
 
-        // CA1822: Сделали метод статическим
-        private static SolidColorBrush GetStatusBrush(string status)
+                private static SolidColorBrush GetStatusBrush(string status)
         {
             return status switch
             {

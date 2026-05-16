@@ -22,8 +22,7 @@ namespace КР_Ханников.Windows
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _ticketId = ticketId;
 
-            LoadComboBoxData(); // Загрузка Enum значений
-            LoadKnowledgeBase();
+            LoadComboBoxData();             LoadKnowledgeBase();
             LoadTicket();
         }
 
@@ -61,25 +60,21 @@ namespace КР_Ханников.Windows
         {
             _ticket = _context.Tickets
                 .Include(t => t.Solution)
-                .Include(t => t.Client) // Подгружаем клиента для отображения имени
-                .FirstOrDefault(t => t.Id == _ticketId);
+                .Include(t => t.Client)                 .FirstOrDefault(t => t.Id == _ticketId);
 
             if (_ticket != null)
             {
-                // Заполняем поля
-                TicketIdBadge.Text = $"#{_ticket.Id}";
+                                TicketIdBadge.Text = $"#{_ticket.Id}";
                 TitleTextBox.Text = _ticket.Title;
                 DescriptionTextBox.Text = _ticket.Description;
                 StatusText.Text = _ticket.Status;
                 CreatedAtText.Text = _ticket.CreatedAt.ToLocalTime().ToString("g");
                 ClientNameText.Text = _ticket.Client?.Name ?? "Неизвестно";
 
-                // Устанавливаем значения в ComboBox
-                CategoryComboBox.SelectedItem = _ticket.Category;
+                                CategoryComboBox.SelectedItem = _ticket.Category;
                 PriorityComboBox.SelectedItem = _ticket.Priority;
 
-                // Устанавливаем выбранную статью, если есть
-                if (_ticket.Solution != null &&
+                                if (_ticket.Solution != null &&
                     _ticket.Solution.KnowledgeArticleId is int articleId &&
                     KnowledgeBaseBox.Items.Count > 0)
                 {
@@ -117,8 +112,7 @@ namespace КР_Ханников.Windows
                 return;
             }
 
-            // Отслеживание изменений для истории
-            string history = "";
+                        string history = "";
 
             if (ticket.Title != newTitle) history += "Изменена тема. ";
             if (ticket.Description != newDescription) history += "Изменено описание. ";
@@ -139,8 +133,7 @@ namespace КР_Ханников.Windows
             ticket.Description = newDescription;
             ticket.UpdatedAt = DateTime.UtcNow;
 
-            // Логика привязки статьи
-            var selectedArticle = KnowledgeBaseBox.SelectedItem as KnowledgeArticle;
+                        var selectedArticle = KnowledgeBaseBox.SelectedItem as KnowledgeArticle;
             int? oldArticleId = ticket.Solution?.KnowledgeArticleId;
             int? newArticleId = selectedArticle?.Id;
 
@@ -150,8 +143,7 @@ namespace КР_Ханников.Windows
 
                 if (newArticleId == null)
                 {
-                    // Удаляем привязку, если решение было только ссылкой (опционально, зависит от бизнес-логики)
-                    if (ticket.Solution != null)
+                                        if (ticket.Solution != null)
                     {
                         ticket.Solution.KnowledgeArticleId = null;
                     }
@@ -173,14 +165,11 @@ namespace КР_Ханников.Windows
                     else
                     {
                         ticket.Solution.KnowledgeArticleId = newArticleId;
-                        // Можно обновить дату решения, если это считается новым решением
-                        // ticket.Solution.ResolutionDate = DateTime.UtcNow; 
-                    }
+                                                                    }
                 }
             }
 
-            // Сохраняем историю
-            if (!string.IsNullOrWhiteSpace(history))
+                        if (!string.IsNullOrWhiteSpace(history))
             {
                 _context.TicketHistories.Add(new TicketHistory
                 {

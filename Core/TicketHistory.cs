@@ -5,12 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace КР_Ханников.Core
 {
-    /// <summary>
-    /// История изменений тикета (создание, смена статуса, дедлайна и т.д.).
-    /// Реализует INotifyPropertyChanged, чтобы при биндинге в WPF обновления
-    /// подтягивались автоматически. Для EF Core это не мешает.
-    /// </summary>
-    public class TicketHistory : INotifyPropertyChanged
+                        public class TicketHistory : INotifyPropertyChanged
     {
         private int _id;
         private int _ticketId;
@@ -43,10 +38,7 @@ namespace КР_Ханников.Core
             }
         }
 
-        /// <summary>
-        /// Краткий тип события: "Статус", "Назначение", "Комментарий" и т.п.
-        /// </summary>
-        public string Action
+                                public string Action
         {
             get => _action;
             set
@@ -57,10 +49,7 @@ namespace КР_Ханников.Core
             }
         }
 
-        /// <summary>
-        /// Детальное описание, что произошло.
-        /// </summary>
-        public string Details
+                                public string Details
         {
             get => _details;
             set

@@ -10,9 +10,7 @@ using КР_Ханников.Core;
 
 namespace КР_Ханников.Converters
 {
-    // =========================================================
-    // Конвертеры цветов и статусов
-    // =========================================================
+    
 
     [ValueConversion(typeof(string), typeof(Brush))]
     public class StatusToColorConverter : IValueConverter
@@ -25,12 +23,7 @@ namespace КР_Ханников.Converters
 
             return status switch
             {
-                Constants.TicketStatus.Open => new SolidColorBrush(Color.FromRgb(249, 115, 22)),      // Orange
-                Constants.TicketStatus.InProgress => new SolidColorBrush(Color.FromRgb(59, 130, 246)),// Blue
-                Constants.TicketStatus.Resolved => new SolidColorBrush(Color.FromRgb(34, 197, 94)),   // Green
-                Constants.TicketStatus.Closed => new SolidColorBrush(Color.FromRgb(107, 114, 128)),   // Gray
-                _ => new SolidColorBrush(Color.FromRgb(156, 163, 175))                                // Default Gray
-            };
+                Constants.TicketStatus.Open => new SolidColorBrush(Color.FromRgb(249, 115, 22)),                      Constants.TicketStatus.InProgress => new SolidColorBrush(Color.FromRgb(59, 130, 246)),                Constants.TicketStatus.Resolved => new SolidColorBrush(Color.FromRgb(34, 197, 94)),                   Constants.TicketStatus.Closed => new SolidColorBrush(Color.FromRgb(107, 114, 128)),                   _ => new SolidColorBrush(Color.FromRgb(156, 163, 175))                                            };
         }
 
         public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -48,20 +41,14 @@ namespace КР_Ханников.Converters
 
             return role switch
             {
-                Constants.UserRoles.Admin => new SolidColorBrush(Color.FromRgb(220, 38, 38)),   // Red
-                Constants.UserRoles.Support => new SolidColorBrush(Color.FromRgb(37, 99, 235)), // Blue
-                Constants.UserRoles.Client => new SolidColorBrush(Color.FromRgb(16, 185, 129)), // Emerald
-                _ => new SolidColorBrush(Color.FromRgb(107, 114, 128))                          // Gray
-            };
+                Constants.UserRoles.Admin => new SolidColorBrush(Color.FromRgb(220, 38, 38)),                   Constants.UserRoles.Support => new SolidColorBrush(Color.FromRgb(37, 99, 235)),                 Constants.UserRoles.Client => new SolidColorBrush(Color.FromRgb(16, 185, 129)),                 _ => new SolidColorBrush(Color.FromRgb(107, 114, 128))                                      };
         }
 
         public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
             => Binding.DoNothing;
     }
 
-    // =========================================================
-    // Конвертеры видимости и логики
-    // =========================================================
+   
 
     [ValueConversion(typeof(object), typeof(Visibility))]
     public class NullToVisibilityConverter : IValueConverter
@@ -206,9 +193,7 @@ namespace КР_Ханников.Converters
             => Binding.DoNothing;
     }
 
-    // =========================================================
-    // Математические конвертеры для KPI и SLA
-    // =========================================================
+    
 
     public class LessThanConverter : IValueConverter
     {

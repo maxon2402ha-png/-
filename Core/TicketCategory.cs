@@ -1,9 +1,6 @@
 ﻿namespace КР_Ханников.Core
 {
-    /// <summary>
-    /// Категория тикета для фильтрации и отчётов.
-    /// </summary>
-    public enum TicketCategory
+                public enum TicketCategory
     {
         General = 0,
         Hardware = 1,

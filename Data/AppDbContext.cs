@@ -51,8 +51,7 @@ namespace КР_Ханников.Data
             }
         }
 
-        // === Глобальные конвенции для дат (Отличное решение для PostgreSQL!) ===
-        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+                protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
         {
             base.ConfigureConventions(configurationBuilder);
 
@@ -231,8 +230,7 @@ namespace КР_Ханников.Data
         }
     }
 
-    // --- Безопасные конвертеры для PostgreSQL ---
-    public class UtcDateTimeConverter : ValueConverter<DateTime, DateTime>
+        public class UtcDateTimeConverter : ValueConverter<DateTime, DateTime>
     {
         public UtcDateTimeConverter() : base(
             v => v == DateTime.MinValue ? DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc) : v.ToUniversalTime(),

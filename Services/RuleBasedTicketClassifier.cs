@@ -11,14 +11,9 @@ namespace КР_Ханников.Services
         (TicketCategory category, TicketPriority priority, bool isMlUsed) Classify(string title, string description);
     }
 
-    /// <summary>
-    /// Классификатор на основе жестких правил (ключевых слов).
-    /// Выполняет роль "экспертной системы" и запасного варианта, если ML модель еще не обучена.
-    /// </summary>
-    public class RuleBasedTicketClassifier : ITicketClassifier
+                    public class RuleBasedTicketClassifier : ITicketClassifier
     {
-        // Словарь критериев: Категория -> Список ключевых слов
-        private static readonly (TicketCategory category, string[] keywords)[] CategoryKeywords =
+                private static readonly (TicketCategory category, string[] keywords)[] CategoryKeywords =
         {
             (TicketCategory.Billing,  new[] { "счёт", "счет", "оплата", "платеж", "платёж", "инвойс", "bill", "invoice", "цена", "стоимость", "бухгалтерия", "акт", "договор" }),
             (TicketCategory.Account,  new[] { "аккаунт", "учётная", "учетная", "запись", "пароль", "логин", "доступ", "вход", "авторизация", "регистрация", "сброс", "блокировка", "права" }),
@@ -29,20 +24,17 @@ namespace КР_Ханников.Services
             (TicketCategory.Other,    new[] { "прочее", "другое", "консультация", "вопрос", "подскажите" }),
         };
 
-        // Словарь критериев: Приоритет -> Список ключевых слов
-        private static readonly string[] CriticalWords = { "не работает", "недоступно", "простой", "падение", "утечка", "срочно", "критично", "краш", "down", "emergency", "ошибка 500", "бизнес встал", "пожар", "взлом" };
+                private static readonly string[] CriticalWords = { "не работает", "недоступно", "простой", "падение", "утечка", "срочно", "критично", "краш", "down", "emergency", "ошибка 500", "бизнес встал", "пожар", "взлом" };
         private static readonly string[] HighWords = { "частично не работает", "нельзя работать", "очень медленно", "задержка", "ошибка", "деградация", "degradation", "важно", "быстрее" };
         private static readonly string[] LowWords = { "вопрос", "как", "инструкция", "улучшить", "предложение", "идея", "фича", "feature", "запрос на улучшение", "не горит", "косметика" };
 
         public (TicketCategory category, TicketPriority priority, bool isMlUsed) Classify(string title, string description)
             {
-            // 1. Нормализация текста (убираем лишние пробелы, приводим к нижнему регистру)
-            var raw = $"{title} {description}";
+                        var raw = $"{title} {description}";
             var text = (raw ?? string.Empty).ToLowerInvariant();
             string norm = Regex.Replace(text, @"\s+", " ");
 
-            // 2. Определение Категории (подсчет вхождений ключевых слов)
-            var catScores = new Dictionary<TicketCategory, int>();
+                        var catScores = new Dictionary<TicketCategory, int>();
 
             foreach (var (category, keys) in CategoryKeywords)
             {
@@ -51,13 +43,11 @@ namespace КР_Ханников.Services
                     catScores[category] = score;
             }
 
-            // Выбираем категорию с максимальным числом совпадений, либо General
-            var categoryResult = catScores.Count > 0
+                        var categoryResult = catScores.Count > 0
                 ? catScores.OrderByDescending(kv => kv.Value).First().Key
                 : TicketCategory.General;
 
-            // 3. Определение Приоритета (по наличию "триггерных" слов)
-            TicketPriority priorityResult = TicketPriority.Normal;
+                        TicketPriority priorityResult = TicketPriority.Normal;
 
             if (ContainsAny(norm, CriticalWords))
                 priorityResult = TicketPriority.Critical;

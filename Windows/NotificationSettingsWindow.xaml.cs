@@ -11,8 +11,7 @@ namespace КР_Ханников.Windows
     public partial class NotificationSettingsWindow : Window
     {
         private readonly int _currentUserId;
-        private NotificationSettings _settings = null!; // Инициализируется в LoadSettings
-
+        private NotificationSettings _settings = null!; 
         public NotificationSettingsWindow(int userId)
         {
             InitializeComponent();
@@ -40,14 +39,12 @@ namespace КР_Ханников.Windows
                         ShowToast = true
                     };
 
-                if (_settings.Id == 0) // Если новая запись
-                {
+                if (_settings.Id == 0)                 {
                     db.NotificationSettings.Add(_settings);
                     db.SaveChanges();
                 }
 
-                // Заполняем форму
-                if (NewTicketsCheckBox != null) NewTicketsCheckBox.IsChecked = _settings.NotifyOnNewTickets;
+                                if (NewTicketsCheckBox != null) NewTicketsCheckBox.IsChecked = _settings.NotifyOnNewTickets;
                 if (StatusChangedCheckBox != null) StatusChangedCheckBox.IsChecked = _settings.NotifyOnStatusChanged;
                 if (CommentsCheckBox != null) CommentsCheckBox.IsChecked = _settings.NotifyOnComments;
                 if (DueSoonCheckBox != null) DueSoonCheckBox.IsChecked = _settings.NotifyOnDueSoon;
@@ -55,8 +52,7 @@ namespace КР_Ханников.Windows
                 if (SoundCheckBox != null) SoundCheckBox.IsChecked = _settings.PlaySound;
                 if (ToastCheckBox != null) ToastCheckBox.IsChecked = _settings.ShowToast;
 
-                // Обновляем состояние панели порога
-                UpdateDueSoonThresholdPanel();
+                                UpdateDueSoonThresholdPanel();
             }
             catch (Exception ex)
             {
@@ -91,8 +87,7 @@ namespace КР_Ханников.Windows
 
         private void Save_Click(object sender, RoutedEventArgs e)
         {
-            // Валидация порога
-            if (!int.TryParse(DueSoonThresholdBox?.Text, out int threshold) || threshold < 1)
+                        if (!int.TryParse(DueSoonThresholdBox?.Text, out int threshold) || threshold < 1)
             {
                 MessageBox.Show("Введите корректное значение для порога напоминания (минимум 1 минута)",
                     "Ошибка валидации", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -100,8 +95,7 @@ namespace КР_Ханников.Windows
                 return;
             }
 
-            if (threshold > 10080) // Максимум неделя
-            {
+            if (threshold > 10080)             {
                 MessageBox.Show("Максимальное значение порога — 10080 минут (1 неделя)",
                     "Ошибка валидации", MessageBoxButton.OK, MessageBoxImage.Warning);
                 DueSoonThresholdBox?.Focus();

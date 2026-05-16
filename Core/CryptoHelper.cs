@@ -5,17 +5,10 @@ using System.Text;
 
 namespace КР_Ханников.Core
 {
-    /// <summary>
-    /// Вспомогательные методы для шифрования/расшифровки конфиденциальных данных.
-    /// Реализация основана на DPAPI (ProtectedData) и привязана к текущему пользователю Windows.
-    /// </summary>
-    [SupportedOSPlatform("windows")]
+                [SupportedOSPlatform("windows")]
     public static class CryptoHelper
     {
-        /// <summary>
-        /// Шифрует строку для безопасного хранения.
-        /// </summary>
-        public static string? EncryptSensitive(string? plainText)
+                                public static string? EncryptSensitive(string? plainText)
         {
             if (string.IsNullOrEmpty(plainText))
                 return plainText;
@@ -36,10 +29,7 @@ namespace КР_Ханников.Core
             }
         }
 
-        /// <summary>
-        /// Расшифровывает строку.
-        /// </summary>
-        public static string? DecryptSensitive(string? cipherText)
+                                public static string? DecryptSensitive(string? cipherText)
         {
             if (string.IsNullOrEmpty(cipherText))
                 return cipherText;
@@ -60,12 +50,7 @@ namespace КР_Ханников.Core
             }
         }
 
-        /// <summary>
-        /// Хеширует пароль с использованием BCrypt.
-        /// </summary>
-        /// <param name="password">Пароль в открытом виде</param>
-        /// <returns>Хеш пароля</returns>
-        public static string HashPassword(string password)
+                                                public static string HashPassword(string password)
         {
             if (string.IsNullOrEmpty(password))
                 throw new ArgumentException("Пароль не может быть пустым", nameof(password));
@@ -73,13 +58,7 @@ namespace КР_Ханников.Core
             return BCrypt.Net.BCrypt.EnhancedHashPassword(password, Constants.Validation.BcryptWorkFactor);
         }
 
-        /// <summary>
-        /// Проверяет соответствие пароля его хешу.
-        /// </summary>
-        /// <param name="password">Пароль в открытом виде</param>
-        /// <param name="passwordHash">Хеш пароля из БД</param>
-        /// <returns>true если пароль верный</returns>
-        public static bool VerifyPassword(string password, string passwordHash)
+                                                        public static bool VerifyPassword(string password, string passwordHash)
         {
             if (string.IsNullOrEmpty(password) || string.IsNullOrEmpty(passwordHash))
                 return false;

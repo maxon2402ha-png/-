@@ -43,14 +43,12 @@ namespace КР_Ханников.Windows
 
                 _article = article;
 
-                // Заполняем поля
-                TitleBox.Text = _article.Title ?? string.Empty;
+                                TitleBox.Text = _article.Title ?? string.Empty;
                 ContentBox.Text = _article.Content ?? string.Empty;
 
                 if (ArticleIdText != null) ArticleIdText.Text = $"ID: {_article.Id}";
 
-                // Сохраняем оригинальные значения
-                _originalTitle = TitleBox.Text;
+                                _originalTitle = TitleBox.Text;
                 _originalContent = ContentBox.Text;
 
                 UpdateCharCounters();
@@ -70,8 +68,7 @@ namespace КР_Ханников.Windows
 
         private void UpdateCharCounters()
         {
-            // Заголовок
-            int titleLen = TitleBox.Text?.Length ?? 0;
+                        int titleLen = TitleBox.Text?.Length ?? 0;
             if (TitleCharCount != null)
             {
                 TitleCharCount.Text = $"{titleLen} / 200";
@@ -80,8 +77,7 @@ namespace КР_Ханников.Windows
                     : System.Windows.Media.Brushes.Gray;
             }
 
-            // Контент
-            string content = ContentBox.Text ?? string.Empty;
+                        string content = ContentBox.Text ?? string.Empty;
             if (ContentCharCount != null) ContentCharCount.Text = $"{content.Length:N0} символов";
 
             if (ContentWordCount != null)
@@ -100,8 +96,7 @@ namespace КР_Ханников.Windows
                 UnsavedBadge.Visibility = changed ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        // --- Обработчики кнопок форматирования ---
-
+        
         private void Bold_Click(object sender, RoutedEventArgs e) => InsertMarkdown("**", "**");
         private void Italic_Click(object sender, RoutedEventArgs e) => InsertMarkdown("*", "*");
 
@@ -137,8 +132,7 @@ namespace КР_Ханников.Windows
             ContentBox.SelectionLength = selectionLength;
         }
 
-        // --- Сохранение ---
-
+        
         private void Save_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrWhiteSpace(TitleBox.Text))

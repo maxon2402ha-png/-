@@ -31,9 +31,7 @@ namespace КР_Ханников.Windows
         private readonly NotificationService _notificationService;
         private readonly TicketService _ticketService;
         private DispatcherTimer? _notificationTimer;
-        private DispatcherTimer? _syncTimer;
 
-        // Для отмены предыдущего запроса поиска при быстром вводе
         private CancellationTokenSource? _searchCts;
         private bool _isLoading = false;
 
@@ -54,18 +52,26 @@ namespace КР_Ханников.Windows
             DataContext = this;
             ConfigureAccess();
 
-            // Первичная загрузка
             bool isClient = CurrentUser?.Role == AppConstants.UserRoles.Client;
             if (isClient) UpdateSidebar(MyTicketsButton); else UpdateSidebar(AllTicketsButton);
 
-            // Запускаем асинхронно
-            _ = LoadTicketsAsync(isClient);
-
             LoadSavedSearches();
-
-            _notificationService.ShowUnreadNotificationsForCurrentUser();
-            UpdateNotificationsButtonCaption();
             StartTimers();
+
+         
+            Loaded += async (s, e) =>
+            {
+                try
+                {
+                    await LoadTicketsAsync(isClient);
+                    _notificationService.ShowUnreadNotificationsForCurrentUser();
+                    UpdateNotificationsButtonCaption();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[MainWindow] Ошибка первичной загрузки: {ex.Message}");
+                }
+            };
         }
 
         private void InitializeFilters()
@@ -98,46 +104,17 @@ namespace КР_Ханников.Windows
                 try
                 {
                     _notificationService.CheckDueSoonTicketsForCurrentUser();
+                    _notificationService.CheckWorkloadAlertsForCurrentUser();
                     UpdateNotificationsButtonCaption();
                 }
                 catch { }
             };
             _notificationTimer.Start();
-
-            _syncTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMinutes(5)
-            };
-            _syncTimer.Tick += async (s, e) =>
-            {
-                try
-                {
-                    using var syncContext = App.CreateDbContext();
-                    using var httpClient = new System.Net.Http.HttpClient();
-                    var syncService = new IntegrationService(
-                        syncContext,
-                        new JiraClient(httpClient),
-                        new TrelloClient(httpClient),
-                        new BugzillaClient(),
-                        new MantisClient());
-
-                    await syncService.SyncAllActiveLinksAsync(CancellationToken.None);
-
-                    if (TicketsContent != null && TicketsContent.Visibility == Visibility.Visible)
-                        await LoadTicketsAsync();
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[AutoSync] {ex.Message}");
-                }
-            };
-            _syncTimer.Start();
         }
 
         protected override void OnClosed(EventArgs e)
         {
             _notificationTimer?.Stop();
-            _syncTimer?.Stop();
             base.OnClosed(e);
         }
 
@@ -146,7 +123,7 @@ namespace КР_Ханников.Windows
             var buttons = new[] {
                 OpenDashboardButton, OpenAnalyticsButton, MyTicketsButton, AllTicketsButton,
                 ClientHistoryButton, ClosedTicketsButton, EmployeesButton,
-                IntegrationButton, AuditButton, OpenKnowledgeBaseButton
+                AuditButton, OpenKnowledgeBaseButton
             };
 
             foreach (var btn in buttons)
@@ -168,18 +145,13 @@ namespace КР_Ханников.Windows
             }
         }
 
-        // --- Обработчики меню (навигация) ---
+      
         private void OpenDashboard_Click(object sender, RoutedEventArgs e)
             => SwitchPage(OpenDashboardButton, new DashboardControl(_authService));
 
-        // Окно аналитики KPI и нагрузки. В отличие от Дашборда это полноценное
-        // Window, а не UserControl, поэтому открывается модально через ShowDialog,
-        // а не через SwitchPage.
+        
         private void OpenAnalytics_Click(object sender, RoutedEventArgs e)
-        {
-            var window = new AnalyticsWindow { Owner = this };
-            window.ShowDialog();
-        }
+            => SwitchPage(OpenAnalyticsButton, new AnalyticsControl());
 
         private void OpenKnowledgeBase_Click(object sender, RoutedEventArgs e)
             => SwitchPage(OpenKnowledgeBaseButton, new KnowledgeBaseControl(_context, _authService));
@@ -190,15 +162,7 @@ namespace КР_Ханников.Windows
         private void OpenEmployees_Click(object sender, RoutedEventArgs e)
         {
             if (_authService.CurrentUser?.Role == AppConstants.UserRoles.Admin)
-                SwitchPage(EmployeesButton, new ManageEmployeesControl());
-            else
-                MessageBox.Show("Доступ запрещен.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
-
-        private void OpenIntegrationSettings_Click(object sender, RoutedEventArgs e)
-        {
-            if (_authService.CurrentUser?.Role == AppConstants.UserRoles.Admin)
-                SwitchPage(IntegrationButton, new IntegrationSettingsControl(_context, _authService));
+                SwitchPage(EmployeesButton, new ManageEmployeesControl(_authService));
             else
                 MessageBox.Show("Доступ запрещен.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
@@ -265,7 +229,7 @@ namespace КР_Ханников.Windows
             if (PagesContent != null) PagesContent.Visibility = Visibility.Collapsed;
         }
 
-        // --- ЛОГИКА ЗАГРУЗКИ (АСИНХРОННАЯ) ---
+        
         public async Task LoadTicketsAsync(bool filterByCurrentUser = false, string? searchQuery = null)
         {
             if (_isLoading) return;
@@ -273,13 +237,13 @@ namespace КР_Ханников.Windows
 
             try
             {
-                // Очистка трекера для получения свежих данных
+
                 _context.ChangeTracker.Clear();
 
                 var currentUser = _authService.CurrentUser;
                 if (currentUser == null) return;
 
-                // Строим запрос
+
                 var query = _context.Tickets
                     .Include(t => t.Client)
                     .Include(t => t.Assignee).ThenInclude(a => a != null ? a.User : null)
@@ -287,12 +251,12 @@ namespace КР_Ханников.Windows
                     .AsNoTracking()
                     .AsQueryable();
 
-                // Фильтрация по правам доступа
+
                 if (currentUser.Role == AppConstants.UserRoles.Client)
                 {
                     var client = await _context.Clients.FirstOrDefaultAsync(c => c.UserId == currentUser.Id);
                     if (client != null) query = query.Where(t => t.ClientId == client.Id);
-                    else query = query.Where(t => false); // Нет клиента - нет тикетов
+                    else query = query.Where(t => false);
                 }
                 else if (currentUser.Role == AppConstants.UserRoles.Support && filterByCurrentUser)
                 {
@@ -300,7 +264,6 @@ namespace КР_Ханников.Windows
                     query = query.Where(t => t.AssigneeEmployeeId == empId);
                 }
 
-                // Поиск
                 var effectiveQuery = searchQuery ?? SearchBox?.Text?.Trim();
                 if (!string.IsNullOrWhiteSpace(effectiveQuery))
                 {
@@ -313,7 +276,7 @@ namespace КР_Ханников.Windows
                         t.Id.ToString().Contains(term));
                 }
 
-                // Фильтры UI
+             
                 if (StatusFilter?.SelectedItem is ComboBoxItem sel && sel.Content is string st && st != "Все статусы" && st != "Все")
                 {
                     if (st == "In Progress") query = query.Where(t => t.Status == AppConstants.TicketStatus.InProgress);
@@ -332,7 +295,7 @@ namespace КР_Ханников.Windows
                 if (CreatedToPicker?.SelectedDate is DateTime to)
                     query = query.Where(t => t.CreatedAt < to.Date.AddDays(1).ToUniversalTime());
 
-                // Сортировка и выполнение запроса асинхронно
+     
                 var tickets = await query
                     .OrderByDescending(t => t.Priority)
                     .ThenByDescending(t => t.CreatedAt)
@@ -351,7 +314,6 @@ namespace КР_Ханников.Windows
             }
         }
 
-        // Обработка ввода с задержкой (Debounce)
         private async void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (MyTicketsButton == null) return;
@@ -363,7 +325,7 @@ namespace КР_Ханников.Windows
 
             try
             {
-                await Task.Delay(500, token); // Ждем 500мс
+                await Task.Delay(500, token); 
                 await LoadTicketsAsync(myOnly, SearchBox?.Text?.Trim());
             }
             catch (TaskCanceledException) { /* Игнорируем отмену */ }
@@ -374,7 +336,7 @@ namespace КР_Ханников.Windows
 
         private async void CreateTicket_Click(object sender, RoutedEventArgs e)
         {
-            if (new CreateTicketWindow(_context, _authService).ShowDialog() == true)
+            if (new CreateTicketWindow(_authService).ShowDialog() == true)
             {
                 if (MyTicketsButton == null) return;
                 bool myOnly = MyTicketsButton.Style == (Style)FindResource("NavButtonActive");
@@ -431,7 +393,7 @@ namespace КР_Ханников.Windows
             }
         }
 
-        // Вспомогательные методы
+
         private void LoadSavedSearches()
         {
             var current = _authService.CurrentUser;
@@ -536,8 +498,7 @@ namespace КР_Ханников.Windows
             }
         }
 
-        // Export Csv/Pdf - (Код экспорта аналогичен предыдущему, но методы асинхронными делать не обязательно, 
-        // так как экспорт происходит из уже загруженного ItemsSource, что быстро)
+       
         private void ExportCsvButton_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -561,7 +522,7 @@ namespace КР_Ханников.Windows
 
         private void ExportPdfButton_Click(object sender, RoutedEventArgs e)
         {
-            // Аналогичный код экспорта PDF
+          
             try
             {
                 var tickets = TicketsGrid.ItemsSource as IEnumerable<Ticket>;
@@ -608,7 +569,7 @@ namespace КР_Ханников.Windows
         private void OpenProfile_Click(object sender, RoutedEventArgs e)
         {
             if (_authService.CurrentUser != null)
-                new UserProfileWindow(_authService.CurrentUser.Id) { Owner = this }.ShowDialog();
+                new UserProfileWindow(_authService) { Owner = this }.ShowDialog();
         }
 
         private void Logout_Click(object sender, RoutedEventArgs e)
@@ -636,7 +597,6 @@ namespace КР_Ханников.Windows
             bool isClient = role == AppConstants.UserRoles.Client;
 
             if (EmployeesButton != null) EmployeesButton.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
-            if (IntegrationButton != null) IntegrationButton.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
             if (AuditButton != null) AuditButton.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
             if (CreateTicketButton != null) CreateTicketButton.Visibility = isClient ? Visibility.Visible : Visibility.Collapsed;
 

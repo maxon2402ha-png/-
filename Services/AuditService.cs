@@ -7,8 +7,7 @@ using КР_Ханников.Data;
 namespace КР_Ханников.Services
 {
     [SupportedOSPlatform("windows")]
-    // IDE0290: Используем основной конструктор
-    public class AuditService(AuthService auth)
+        public class AuditService(AuthService auth)
     {
         private readonly AuthService _auth = auth ?? throw new ArgumentNullException(nameof(auth));
 

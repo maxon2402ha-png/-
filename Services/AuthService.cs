@@ -10,30 +10,24 @@ using КР_Ханников.Data;
 namespace КР_Ханников.Services
 {
     [SupportedOSPlatform("windows")]
-    // IDE0290: Используем современный первичный конструктор (Primary Constructor)
-    public class AuthService(AppDbContext context)
+        public class AuthService(AppDbContext context)
     {
         private readonly AppDbContext _context = context ?? throw new ArgumentNullException(nameof(context));
 
-        // Текущий авторизованный пользователь
-        public User? CurrentUser { get; private set; }
+                public User? CurrentUser { get; private set; }
 
-        // --- ВХОД В СИСТЕМУ ---
-        public bool Login(string username, string password)
+                public bool Login(string username, string password)
         {
             try
             {
                 username = (username ?? string.Empty).Trim();
                 password = (password ?? string.Empty).Trim();
 
-#pragma warning disable CA1862 // Отключаем CA1862: EF Core требует ToLower для трансляции в SQL
-#if DEBUG
-                // В режиме отладки разрешаем вход под логином admin и паролем admin123
-                if (string.Equals(username, "admin", StringComparison.OrdinalIgnoreCase) &&
+#pragma warning disable CA1862 #if DEBUG
+                                if (string.Equals(username, "admin", StringComparison.OrdinalIgnoreCase) &&
                     password == "admin123")
                 {
-                    // Возвращаем ToLower(), чтобы SQL смог это обработать
-                    var debugAdmin = _context.Users.AsNoTracking()
+                                        var debugAdmin = _context.Users.AsNoTracking()
                         .FirstOrDefault(u => u.Username.ToLower() == "admin");
 
                     if (debugAdmin != null)
@@ -43,10 +37,9 @@ namespace КР_Ханников.Services
                         return true;
                     }
                 }
-#endif
 
-                // Валидация
-                if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+
+                                if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
                 {
                     LogSecurityEvent(username, "LoginFailure", "Пустой логин или пароль");
                     return false;
@@ -54,8 +47,7 @@ namespace КР_Ханников.Services
 
                 var normalizedUsername = username.ToLower();
 
-                // Возвращаем ToLower(), чтобы SQL смог это обработать
-                var user = _context.Users.AsNoTracking()
+                                var user = _context.Users.AsNoTracking()
                     .FirstOrDefault(u => u.Username.ToLower() == normalizedUsername);
 #pragma warning restore CA1862
 
@@ -67,15 +59,13 @@ namespace КР_Ханников.Services
 
                 if (BCrypt.Net.BCrypt.EnhancedVerify(password, user.PasswordHash))
                 {
-                    // === ПРОВЕРКА EMAIL ВЕРИФИКАЦИИ ===
-                    if (!user.IsEmailVerified && user.Role == Constants.UserRoles.Client)
+                                        if (!user.IsEmailVerified && user.Role == Constants.UserRoles.Client)
                     {
                         MessageBox.Show("Ваш Email не подтвержден. Пожалуйста, завершите регистрацию.",
                             "Вход запрещен", MessageBoxButton.OK, MessageBoxImage.Warning);
                         return false;
                     }
-                    // ===================================
-
+                    
                     CurrentUser = user;
                     LogSecurityEvent(user.Username, "LoginSuccess", $"Роль: {user.Role}");
                     return true;
@@ -101,34 +91,26 @@ namespace КР_Ханников.Services
             }
         }
 
-        // --- РЕГИСТРАЦИЯ ---
-
-        // CA1822: Метод сделан статическим, так как не использует this
-        private static string GenerateVerificationCode()
+        
+                private static string GenerateVerificationCode()
         {
             var random = new Random();
             return random.Next(100000, 999999).ToString();
         }
 
-        // Этот метод оставлен для обратной совместимости, но лучше использовать RegisterClientWithCode
-        public bool RegisterClient(string username, string password)
+                public bool RegisterClient(string username, string password)
         {
-            // Упрощенная регистрация без Email (если где-то еще используется)
-            return RegisterClientWithCode(username, username, password, "") != null;
+                        return RegisterClientWithCode(username, username, password, "") != null;
         }
 
-        /// <summary>
-        /// Регистрирует клиента и возвращает объект User для дальнейшей отправки письма.
-        /// </summary>
-        public User? RegisterClientWithCode(string name, string username, string password, string email)
+                                public User? RegisterClientWithCode(string name, string username, string password, string email)
         {
             try
             {
                 ValidateCredentials(username, password);
                 var normalizedUsername = username.Trim().ToLower();
 
-#pragma warning disable CA1862 // Отключаем CA1862: EF Core требует ToLower для трансляции в SQL
-                if (_context.Users.Any(u => u.Username.ToLower() == normalizedUsername))
+#pragma warning disable CA1862                 if (_context.Users.Any(u => u.Username.ToLower() == normalizedUsername))
                 {
                     MessageBox.Show("Пользователь с таким логином уже существует!");
                     return null;
@@ -143,8 +125,7 @@ namespace КР_Ханников.Services
                     PasswordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(password.Trim(), Constants.Validation.BcryptWorkFactor),
                     Role = Constants.UserRoles.Client,
                     Email = email,
-                    IsEmailVerified = false, // По умолчанию не подтвержден
-                    VerificationCode = code
+                    IsEmailVerified = false,                     VerificationCode = code
                 };
 
                 _context.Users.Add(user);
@@ -170,10 +151,7 @@ namespace КР_Ханников.Services
             }
         }
 
-        /// <summary>
-        /// Проверяет код и активирует аккаунт.
-        /// </summary>
-        public bool VerifyEmail(int userId, string code)
+                                public bool VerifyEmail(int userId, string code)
         {
             var user = _context.Users.Find(userId);
             if (user == null) return false;
@@ -181,8 +159,7 @@ namespace КР_Ханников.Services
             if (user.VerificationCode == code)
             {
                 user.IsEmailVerified = true;
-                user.VerificationCode = null; // Сбрасываем код безопасности
-                _context.SaveChanges();
+                user.VerificationCode = null;                 _context.SaveChanges();
 
                 LogSecurityEvent(user.Username, "EmailVerified", "Email успешно подтвержден");
                 return true;
@@ -200,8 +177,7 @@ namespace КР_Ханников.Services
 
                 var normalizedUsername = username.Trim().ToLower();
 
-#pragma warning disable CA1862 // Отключаем CA1862: EF Core требует ToLower для трансляции в SQL
-                if (_context.Users.Any(u => u.Username.ToLower() == normalizedUsername))
+#pragma warning disable CA1862                 if (_context.Users.Any(u => u.Username.ToLower() == normalizedUsername))
                 {
                     MessageBox.Show("Пользователь с таким логином уже существует!");
                     return false;
@@ -213,8 +189,7 @@ namespace КР_Ханников.Services
                     Username = normalizedUsername,
                     PasswordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(password.Trim(), Constants.Validation.BcryptWorkFactor),
                     Role = role.Trim(),
-                    IsEmailVerified = true // Сотрудников активируем сразу
-                };
+                    IsEmailVerified = true                 };
 
                 _context.Users.Add(user);
                 _context.SaveChanges();
@@ -241,8 +216,7 @@ namespace КР_Ханников.Services
             }
         }
 
-        // --- УПРАВЛЕНИЕ ПРОФИЛЕМ ---
-
+        
         public bool UpdateProfile(string newUsername, string? avatarPath)
         {
             if (CurrentUser == null) return false;
@@ -253,8 +227,7 @@ namespace КР_Ханников.Services
 
                 if (!string.Equals(CurrentUser.Username, newUsername, StringComparison.OrdinalIgnoreCase))
                 {
-#pragma warning disable CA1862 // Отключаем CA1862: EF Core требует ToLower для трансляции в SQL
-                    if (_context.Users.Any(u => u.Username.ToLower() == newUsername.ToLower()))
+#pragma warning disable CA1862                     if (_context.Users.Any(u => u.Username.ToLower() == newUsername.ToLower()))
                     {
                         MessageBox.Show("Этот логин уже занят.");
                         return false;
@@ -317,10 +290,8 @@ namespace КР_Ханников.Services
             }
         }
 
-        // --- ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ---
-
-        // CA1822: Метод сделан статическим, так как не использует this
-        private static void LogSecurityEvent(string username, string action, string details)
+        
+                private static void LogSecurityEvent(string username, string action, string details)
         {
             try
             {
@@ -339,8 +310,7 @@ namespace КР_Ханников.Services
             catch (Exception ex) { Debug.WriteLine($"Audit Fail: {ex.Message}"); }
         }
 
-        // CA1822: Метод сделан статическим, так как не использует this
-        private static void ValidateCredentials(string username, string password)
+                private static void ValidateCredentials(string username, string password)
         {
             if (string.IsNullOrWhiteSpace(username))
                 throw new ArgumentException("Логин не может быть пустым");
@@ -355,8 +325,7 @@ namespace КР_Ханников.Services
                 throw new ArgumentException($"Пароль должен содержать минимум {Constants.Validation.MinPasswordLength} символов");
         }
 
-        // CA1822: Метод сделан статическим, так как не использует this
-        private static void ValidateEmployeeData(string name, string role)
+                private static void ValidateEmployeeData(string name, string role)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Имя сотрудника не может быть пустым");

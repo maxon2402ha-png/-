@@ -21,8 +21,7 @@ namespace КР_Ханников.Windows
 
         private void UsernameBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            // Убираем пробелы при вводе логина
-            if (UsernameBox.Text.Contains(" "))
+                        if (UsernameBox.Text.Contains(" "))
             {
                 int caretIndex = UsernameBox.CaretIndex;
                 UsernameBox.Text = UsernameBox.Text.Replace(" ", "");
@@ -35,8 +34,7 @@ namespace КР_Ханников.Windows
             var name = NameBox.Text.Trim();
             var username = UsernameBox.Text.Trim();
             var password = PasswordBox.Password;
-            // ИСПРАВЛЕНИЕ: Используем RoleBox, как указано в XAML
-            var role = (RoleBox.SelectedItem as ComboBoxItem)?.Content.ToString() ?? Constants.UserRoles.Support;
+                        var role = (RoleBox.SelectedItem as ComboBoxItem)?.Content.ToString() ?? Constants.UserRoles.Support;
 
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
@@ -54,40 +52,33 @@ namespace КР_Ханников.Windows
             {
                 using var db = App.CreateDbContext();
 
-                // Проверяем, свободен ли логин (игнорируя регистр)
-                if (await db.Users.AnyAsync(u => u.Username.ToLower() == username.ToLower()))
+                                if (await db.Users.AnyAsync(u => u.Username.ToLower() == username.ToLower()))
                 {
                     MessageBox.Show("Пользователь с таким логином уже существует в системе! Пожалуйста, придумайте другой логин.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                     UsernameBox.Focus();
                     return;
                 }
 
-                // 1. Создаем учетную запись
-                var user = new User
+                                var user = new User
                 {
                     Username = username,
                     PasswordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(password, 13),
                     Role = role,
-                    IsEmailVerified = true, // Сотрудникам почту подтверждать не нужно (внутренняя регистрация)
-                    CreatedAt = DateTime.UtcNow
+                    IsEmailVerified = true,                     CreatedAt = DateTime.UtcNow
                 };
 
                 db.Users.Add(user);
-                await db.SaveChangesAsync(); // Сохраняем, чтобы БД сгенерировала ID пользователя
-
-                // 2. Создаем профиль сотрудника
-                var employee = new Employee
+                await db.SaveChangesAsync(); 
+                                var employee = new Employee
                 {
                     UserId = user.Id,
                     Name = name,
                     Role = role,
-                    MaxActiveTickets = 5 // Дефолтный лимит нагрузки для авто-назначения
-                };
+                    MaxActiveTickets = 5                 };
 
                 db.Employees.Add(employee);
 
-                // 3. Пишем в аудит безопасности
-                db.AuditLogs.Add(new AuditLog
+                                db.AuditLogs.Add(new AuditLog
                 {
                     Username = "System",
                     Action = "Создание сотрудника",

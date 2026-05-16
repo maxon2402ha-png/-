@@ -27,12 +27,10 @@ namespace КР_Ханников.Windows
             InitializeComponent();
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
 
-            // Устанавливаем период по умолчанию (последние 7 дней)
-            FromPicker.SelectedDate = DateTime.Now.AddDays(-7);
+                        FromPicker.SelectedDate = DateTime.Now.AddDays(-7);
             ToPicker.SelectedDate = DateTime.Now;
 
-            // Настраиваем таймер для отложенного поиска (Debounce)
-            _searchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+                        _searchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
             _searchTimer.Tick += async (s, e) =>
             {
                 _searchTimer.Stop();
@@ -48,11 +46,9 @@ namespace КР_Ханников.Windows
             {
                 using var db = App.CreateDbContext();
 
-                // Используем IQueryable, чтобы фильтровать данные прямо в SQL, а не в оперативной памяти
-                var query = db.AuditLogs.AsNoTracking().AsQueryable();
+                                var query = db.AuditLogs.AsNoTracking().AsQueryable();
 
-                // 1. Фильтр по строке поиска
-                var search = SearchBox.Text?.Trim().ToLower();
+                                var search = SearchBox.Text?.Trim().ToLower();
                 if (!string.IsNullOrEmpty(search))
                 {
                     query = query.Where(l =>
@@ -62,8 +58,7 @@ namespace КР_Ханников.Windows
                     );
                 }
 
-                // 2. Фильтр по типу действия
-                if (ActionFilter.SelectedItem is ComboBoxItem item && item.Content != null)
+                                if (ActionFilter.SelectedItem is ComboBoxItem item && item.Content != null)
                 {
                     var action = item.Content.ToString();
                     if (action != "Все действия")
@@ -72,22 +67,19 @@ namespace КР_Ханников.Windows
                     }
                 }
 
-                // 3. Фильтр по дате "От" (переводим в UTC для PostgreSQL)
-                if (FromPicker.SelectedDate.HasValue)
+                                if (FromPicker.SelectedDate.HasValue)
                 {
                     var start = FromPicker.SelectedDate.Value.ToUniversalTime();
                     query = query.Where(l => l.Timestamp >= start);
                 }
 
-                // 4. Фильтр по дате "До" (добавляем 1 день, чтобы включить весь выбранный день)
-                if (ToPicker.SelectedDate.HasValue)
+                                if (ToPicker.SelectedDate.HasValue)
                 {
                     var end = ToPicker.SelectedDate.Value.AddDays(1).ToUniversalTime();
                     query = query.Where(l => l.Timestamp < end);
                 }
 
-                // Вытягиваем данные с ограничением в 1000 последних записей
-                var logs = await query
+                                var logs = await query
                     .OrderByDescending(l => l.Timestamp)
                     .Take(1000)
                     .ToListAsync();
@@ -105,8 +97,7 @@ namespace КР_Ханников.Windows
 
         private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            // Перезапускаем таймер при каждом вводе символа
-            if (_searchTimer != null)
+                        if (_searchTimer != null)
             {
                 _searchTimer.Stop();
                 _searchTimer.Start();
@@ -120,8 +111,7 @@ namespace КР_Ханников.Windows
 
         private async void Reset_Click(object sender, RoutedEventArgs e)
         {
-            // Сбрасываем фильтры к значениям по умолчанию
-            SearchBox.Text = string.Empty;
+                        SearchBox.Text = string.Empty;
             ActionFilter.SelectedIndex = 0;
             FromPicker.SelectedDate = DateTime.Now.AddDays(-7);
             ToPicker.SelectedDate = DateTime.Now;
@@ -154,8 +144,7 @@ namespace КР_Ханников.Windows
                     foreach (var l in logs)
                     {
                         string user = string.IsNullOrWhiteSpace(l.Username) ? "Система" : l.Username;
-                        // Заменяем точку с запятой и переносы строк, чтобы не сломать формат CSV
-                        string details = l.Details?.Replace(";", ",").Replace("\n", " ").Replace("\r", "") ?? "";
+                                                string details = l.Details?.Replace(";", ",").Replace("\n", " ").Replace("\r", "") ?? "";
 
                         writer.WriteLine($"{l.Id};{l.Timestamp:dd.MM.yyyy HH:mm:ss};{user};{l.Action};{details}");
                     }
@@ -170,8 +159,7 @@ namespace КР_Ханников.Windows
 
         private void Close_Click(object sender, RoutedEventArgs e)
         {
-            // Умное закрытие: ищем главное окно и переключаем на тикеты, либо просто скрываем контрол
-            if (Window.GetWindow(this) is MainWindow mainWindow)
+                        if (Window.GetWindow(this) is MainWindow mainWindow)
             {
                 mainWindow.OpenTickets_Click(sender, e);
             }

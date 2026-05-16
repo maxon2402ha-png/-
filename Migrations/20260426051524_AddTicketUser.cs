@@ -4,11 +4,9 @@
 
 namespace КР_Ханников.Migrations
 {
-    /// <inheritdoc />
-    public partial class AddTicketUser : Migration
+        public partial class AddTicketUser : Migration
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
+                protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropForeignKey(
                 name: "FK_Tickets_Users_UserId",
@@ -23,8 +21,7 @@ namespace КР_Ханников.Migrations
                 table: "Tickets");
         }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
+                protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<int>(
                 name: "UserId",

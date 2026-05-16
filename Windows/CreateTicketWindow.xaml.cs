@@ -96,9 +96,7 @@ namespace КР_Ханников.Windows
 
                 var client = await db.Clients.FirstOrDefaultAsync(c => c.UserId == currentUser.Id);
 
-                // 1. СОЗДАНИЕ ТИКЕТА. 
-                // Мы НЕ передаем категорию и приоритет. TicketService вызовет ML-модель сам!
-                var newTicket = await ticketService.CreateAsync(
+                                                var newTicket = await ticketService.CreateAsync(
                     clientId: client!.Id,
                     title: TitleTextBox.Text.Trim(),
                     description: DescriptionTextBox.Text.Trim(),
@@ -106,8 +104,7 @@ namespace КР_Ханников.Windows
                     authorUserId: currentUser.Id
                 );
 
-                // 2. Сохранение файла
-                if (!string.IsNullOrEmpty(_attachedFilePath) && File.Exists(_attachedFilePath))
+                                if (!string.IsNullOrEmpty(_attachedFilePath) && File.Exists(_attachedFilePath))
                 {
                     try
                     {
@@ -133,8 +130,7 @@ namespace КР_Ханников.Windows
 
                 notificationService.NotifyOperatorsAboutNewTicket(newTicket);
 
-                // Показываем клиенту, что ИИ всё сделал за него
-                MessageBox.Show($"Тикет #{newTicket.Id} успешно создан!\n\n✨ Нейросеть обработала заявку:\nКатегория: {newTicket.Category}\nПриоритет: {newTicket.Priority}",
+                                MessageBox.Show($"Тикет #{newTicket.Id} успешно создан!\n\n✨ Нейросеть обработала заявку:\nКатегория: {newTicket.Category}\nПриоритет: {newTicket.Priority}",
                                 "Успешно создано", MessageBoxButton.OK, MessageBoxImage.Information);
 
                 DialogResult = true;

@@ -35,8 +35,7 @@ namespace КР_Ханников.Windows
             Loaded += (s, e) => LoadUserData();
         }
 
-        // Позволяет перетаскивать окно без рамок
-        private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+                private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ChangedButton == MouseButton.Left)
             {
@@ -92,8 +91,7 @@ namespace КР_Ханников.Windows
 
                 UpdateAvatarDisplay(_currentUser.AvatarPath);
 
-                // === РАСЧЕТ И ВЫВОД СТАТИСТИКИ (KPI) ===
-                if (UserStatsPanel != null && StatLabel1 != null && StatValue1 != null && StatLabel2 != null && StatValue2 != null)
+                                if (UserStatsPanel != null && StatLabel1 != null && StatValue1 != null && StatLabel2 != null && StatValue2 != null)
                 {
                     UserStatsPanel.Visibility = Visibility.Visible;
 
@@ -113,8 +111,7 @@ namespace КР_Ханников.Windows
                         var closedTickets = db.Tickets.Count(t => t.AssigneeEmployeeId == employee.Id && t.Status == Constants.TicketStatus.Closed);
 
                         StatLabel1.Text = "Рейтинг";
-                        StatValue1.Text = "4.9"; // Оптимистичная заглушка 
-
+                        StatValue1.Text = "4.9"; 
                         StatLabel2.Text = "Закрыто тикетов";
                         StatValue2.Text = closedTickets.ToString();
                     }
@@ -135,8 +132,7 @@ namespace КР_Ханников.Windows
                     }
                 }
 
-                // Загрузка темы (если ThemeManager настроен)
-                var settings = db.UserUiSettings.AsNoTracking().FirstOrDefault(s => s.UserId == _userId);
+                                var settings = db.UserUiSettings.AsNoTracking().FirstOrDefault(s => s.UserId == _userId);
                 if (ThemeToggle != null)
                 {
                     ThemeToggle.IsChecked = settings?.Theme == "Dark";
@@ -186,8 +182,7 @@ namespace КР_Ханников.Windows
                 {
                     var bitmap = new BitmapImage();
                     bitmap.BeginInit();
-                    bitmap.CacheOption = BitmapCacheOption.OnLoad; // Важно, чтобы файл не блокировался
-                    bitmap.UriSource = new Uri(path);
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad;                     bitmap.UriSource = new Uri(path);
                     bitmap.EndInit();
 
                     if (ProfileImage != null) ProfileImage.ImageSource = bitmap;
@@ -216,8 +211,7 @@ namespace КР_Ханников.Windows
             }
         }
 
-        // --- ИНТЕРАКТИВНОСТЬ ПАРОЛЯ ---
-        private void NewPassBox_PasswordChanged(object sender, RoutedEventArgs e)
+                private void NewPassBox_PasswordChanged(object sender, RoutedEventArgs e)
         {
             UpdatePasswordStrength();
             CheckPasswordMatch();
@@ -266,8 +260,7 @@ namespace КР_Ханников.Windows
             PasswordMatchPanel.Visibility = Visibility.Visible;
 
             bool isMatch = NewPassBox.Password == ConfirmPassBox.Password && NewPassBox.Password.Length >= 6;
-            string colorHex = isMatch ? "#10B981" : "#EF4444"; // Зеленый / Красный
-            var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(colorHex));
+            string colorHex = isMatch ? "#10B981" : "#EF4444";             var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(colorHex));
 
             if (PasswordMatchIcon != null) PasswordMatchIcon.Background = brush;
 
@@ -352,8 +345,7 @@ namespace КР_Ханников.Windows
                     return;
                 }
 
-                // 1. Сохранение Аватара
-                if (!string.IsNullOrEmpty(_tempAvatarPath))
+                                if (!string.IsNullOrEmpty(_tempAvatarPath))
                 {
                     var avatarsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "КР_Ханников", "Avatars");
                     if (!Directory.Exists(avatarsDir)) Directory.CreateDirectory(avatarsDir);
@@ -365,8 +357,7 @@ namespace КР_Ханников.Windows
                     userToUpdate.AvatarPath = destPath;
                 }
 
-                // 2. Обновление Логина
-                var newUsername = UsernameBox.Text.Trim();
+                                var newUsername = UsernameBox.Text.Trim();
                 if (newUsername != userToUpdate.Username)
                 {
                     if (db.Users.Any(u => u.Username.ToLower() == newUsername.ToLower() && u.Id != _userId))
@@ -379,8 +370,7 @@ namespace КР_Ханников.Windows
 
                 userToUpdate.Email = EmailBox?.Text.Trim();
 
-                // 3. Обновление ФИО в профиле сотрудника/клиента
-                var newName = FullNameBox.Text.Trim();
+                                var newName = FullNameBox.Text.Trim();
                 if (userToUpdate.Role == Constants.UserRoles.Client)
                 {
                     var client = db.Clients.FirstOrDefault(c => c.UserId == _userId);
@@ -396,8 +386,7 @@ namespace КР_Ханников.Windows
                     if (emp != null) emp.Name = newName;
                 }
 
-                // 4. Логирование
-                db.AuditLogs.Add(new AuditLog
+                                db.AuditLogs.Add(new AuditLog
                 {
                     Username = userToUpdate.Username,
                     Action = "Обновление профиля",
@@ -407,8 +396,7 @@ namespace КР_Ханников.Windows
 
                 db.SaveChanges();
 
-                // Обновляем текущую сессию
-                if (_authService.CurrentUser != null)
+                                if (_authService.CurrentUser != null)
                 {
                     _authService.CurrentUser.AvatarPath = userToUpdate.AvatarPath;
                     _authService.CurrentUser.Username = userToUpdate.Username;

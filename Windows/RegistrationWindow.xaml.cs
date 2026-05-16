@@ -225,8 +225,7 @@ namespace КР_Ханников.Windows
 
             try
             {
-                // Используем поле _context
-                var username = UsernameBox?.Text?.Trim() ?? "";
+                                var username = UsernameBox?.Text?.Trim() ?? "";
                 var normalizedUsername = username.ToLower();
 
                 if (_context.Users.Any(u => u.Username.ToLower() == normalizedUsername))
